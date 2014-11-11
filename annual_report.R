@@ -5,6 +5,7 @@
 setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/R/data")
 dat <- read.csv("annual_data.csv", header = T)
 av.ind <- read.csv("annual_average_individuals.csv", header = T)
+int <- read.csv("annual_interobserver.csv", header = T)[1:491, ]
 
 wind.dir <- rep("OFF", nrow(dat))
 wind.dir[dat$Wind.direction >= 0 & dat$Wind.direction <= 180] <- "ON"
@@ -72,6 +73,40 @@ dat.south <- dat[dat$Flight.Direction == "S" & is.na(dat$Dist..from.transect) ==
 dat.south$wind.dir <-  wind.dir[dat$Flight.Direction == "S" & is.na(dat$Dist..from.transect) == FALSE]
 south.lm <- lm(log(dat.south$Dist..from.transect) ~ dat.south$Beaufort.Sea.State + dat.south$wind.dir + dat.south$Wind.speed + dat.south$Cloud.cover + dat.south$Water.clarity + dat.south$Glare)
 summary(south.lm)
+
+
+#plot of number of sightings per hour in each environmental condition level
+par(mfrow = c(2, 2))
+
+sightings_ss_hour <- table(dat$Flight.Direction, dat$Beaufort.Sea.State)
+sightings_ss_hour[1, ] <- sightings_ss_hour[1, ]/c(191/60, 74/60, 1431/60, 311/60, 1)
+sightings_ss_hour[2, ] <- sightings_ss_hour[2, ]/c(193/60, 23/60, 1403/60, 444/60, 58/60)
+
+barplot(sightings_ss_hour, beside = T, xlab = "Beaufort Sea State", ylab = "sightings/hour effort")
+
+
+sightings_cc_hour <- table(dat$Flight.Direction, dat$Cloud.cover)
+sightings_cc_hour[1, ] <- sightings_cc_hour[1, ]/c(499, 394, 85, 141, 191, 182, 54, 96, 372)*60
+sightings_cc_hour[2, ] <- sightings_cc_hour[2, ]/c(425, 289, 131, 415, 326, 138, 8, 222, 169)*60
+
+barplot(sightings_cc_hour, beside = T, xlab = "Cloud cover", ylab = "sightings/hour effort")
+
+sightings_wc_hour <- table(dat$Flight.Direction, dat$Water.clarity)
+sightings_wc_hour[1, ] <- sightings_wc_hour[1, ]/c(120, 1462, 432)*60
+sightings_wc_hour[2, ] <- sightings_wc_hour[2, ]/c(76, 1696, 351)*60
+
+barplot(sightings_wc_hour, beside = T, xlab = "Water clarity (1 = excellent, 2 = good, 3 = poor)", ylab = "sightings/hour effort")
+
+sightings_g_hour <- table(dat$Flight.Direction, dat$Glare)
+sightings_g_hour[1, ] <- sightings_g_hour[1, ]/c(1117, 283, 508, 74, 1, 1, 11, 1, 1)*60
+sightings_g_hour[2, ] <- sightings_g_hour[2, ]/c(1462, 161, 182, 106, 48, 43, 4, 45, 38)*60 
+
+barplot(sightings_g_hour, beside = T, xlab = "Glare (%)", ylab = "sightings/hour effort")
+
+
+#inter-observer sightings
+table(int$Observer, int$Species)
+
 
 
 
