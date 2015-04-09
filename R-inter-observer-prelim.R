@@ -1,6 +1,8 @@
 #inter-observer aerial survey preliminary analysis
 setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/R/data")
 dat <- read.csv("interobserver_20150407.csv", header = T)
+library(knitr)
+
 
 #total sightings seen by each observer
 table(dat$Observer, dat$Species)
@@ -141,3 +143,12 @@ t <- table(total_missed$Beaufort.Sea.State)
 missed_hr <- matrix(c(t[1]+t[2], t[3], t[4], t[5])/ss_percent, ncol = 4)
 colnames(missed_hr) <- c("1", "2", "3", "4")
 kable(missed_hr, format = "pandoc", caption = "Number of missed sightings per hour effort at each sea state")
+
+total_missed$Date <- chron(dates. = total_missed$Date, format = "d/m/y")
+
+plot(table(total_missed$Observer, total_missed$Date)[1, ], type = "l", ylim = c(0, 35), 
+     xlab = "Date", xaxt = "n", ylab = "# of missed sightings", lwd = 2)
+points(table(total_missed$Observer, total_missed$Date)[2, ], col = "red", type = "l", lwd = 2)
+legend("topleft", c("Vic", "Lisa"), col = c("black", "red"), lwd = 2, bty = "n", cex = 0.8)
+axis(side = 1, at = 1:16, colnames(table(total_missed$Observer, total_missed$Date)))
+

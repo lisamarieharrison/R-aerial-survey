@@ -22,7 +22,7 @@ kable(table(dat$Observer, dat$Species), format = "pandoc", caption = "Total sigh
 
 
 
-The sightings were searched for overlaps, where a sighting was seen by each observer and the number of sightings missed by each observer were calculated.
+The sightings were searched for overlaps (where a sighting was seen by both observers) and the number of sightings missed by each observer were calculated.
 
 <<overlapSightings, echo=FALSE>>=
 lisa <- dat[dat$Observer == "Lisa", ]
@@ -175,6 +175,20 @@ t <- table(total_missed$Beaufort.Sea.State)
 missed_hr <- matrix(c(t[1]+t[2], t[3], t[4], t[5])/ss_percent, ncol = 4)
 colnames(missed_hr) <- c("1", "2", "3", "4")
 kable(missed_hr, format = "pandoc", caption = "Number of missed sightings per hour effort at each sea state")
+@
+
+The number of sightings missed by each observer can be plotted by date. There is no consistent pattern between observers.
+
+<<missedDate, echo=FALSE, fig=TRUE, width=10>>=
+
+total_missed$Date <- chron(dates. = as.character(total_missed$Date), format = "d/m/y")
+
+plot(table(total_missed$Observer, total_missed$Date)[1, ], type = "l", ylim = c(0, 35), 
+     xlab = "Date", xaxt = "n", ylab = "# of missed sightings", lwd = 2)
+points(table(total_missed$Observer, total_missed$Date)[2, ], col = "red", type = "l", lwd = 2)
+legend("topleft", c("Vic", "Lisa"), col = c("black", "red"), lwd = 2, bty = "n", cex = 0.8)
+axis(side = 1, at = 1:16, colnames(table(total_missed$Observer, total_missed$Date)))
+title("Missed sightings by date")
 @
 
 \end{document}
