@@ -168,6 +168,69 @@ min_dist_to_fish[min_dist_to_fish == "Inf"] <- NA
 hist(min_dist_to_fish, breaks = 150, main = "Distance to closest baitfish - white shark")
 
 
+#number of baitfish within 10km of each sighting
+bot10k <- distance[bot, bait]
+bot10k[bot10k > 10] <- NA
+bot10k[bot10k <= 10] <- 1
+fish_within_10k <- apply(bot10k, 1, sum, na.rm = TRUE)
+hist(fish_within_10k, breaks = seq(0, max(fish_within_10k), by = 0.5))
+
+white10k <- distance[white, bait]
+white10k[white10k > 10] <- NA
+white10k[white10k <= 10] <- 1
+fish_within_10k <- apply(white10k, 1, sum, na.rm = TRUE)
+hist(fish_within_10k, breaks = seq(0, max(fish_within_10k), by = 0.5))
+
+
+#distance to baitfish from each sighting (not on same day) to check if sightings in high density prey areas
+distance_all <- matrix(0, nrow = nrow(dat_season_north), ncol = nrow(dat_season_north))
+for (i in 1:nrow(dat_season_north)) {
+  for (j in 1:nrow(dat_season_north)) {
+    distance_all[i, j] <- gcd.hf(deg2rad(dat_season_north$Lat[i]), deg2rad(dat_season_north$Long[i]), deg2rad(dat_season_north$Lat[j]), deg2rad(dat_season_north$Long[j]))    
+  }
+}
+
+hist(distance_all[bot, bait])
+hist(distance_all[white, bait])
+
+
+#number of each species at each latitude
+lat_tab <- table(dat$Species, round(dat$Lat, 2))
+species <- which(rownames(lat_tab) %in% c("B", "BOT", "HH", "W"))
+
+barplot(lat_tab[species[1], ], beside = TRUE, main = "# of baitfish sightings at each latitude", xlab = "latitude", ylab = "total sightings")
+barplot(lat_tab[species[2], ], beside = TRUE, main = "# of dolphin sightings at each latitude", xlab = "latitude", ylab = "total sightings")
+barplot(lat_tab[species[3], ], beside = TRUE, main = "# of hammerhead sightings at each latitude", xlab = "latitude", ylab = "total sightings")
+barplot(lat_tab[species[4], ], beside = TRUE, main = "# of white shark sightings at each latitude", xlab = "latitude", ylab = "total sightings")
+
+
+#tide data
+tide_tab <- table(dat$Species, dat$Tide)
+species <- which(rownames(lat_tab) %in% c("B", "BOT", "HH", "W"))
+date_tab <- table(dat$Date, dat$Tide)
+date_tab[date_tab > 0] <- 1
+date_weight <- colSums(date_tab)
+
+barplot(tide_tab[species[1], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "baitfish sightings at tide heights")
+barplot(tide_tab[species[2], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "dolphin sightings at tide heights")
+barplot(tide_tab[species[3], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "hammerhead sightings at tide heights")
+barplot(tide_tab[species[4], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "white shark sightings at tide heights")
+
+
+#swim direction
+#no difference in N, S or C for flight directions
+table(dat$Flight.Direction[dat$Species == "BOT"], dat$Swim.Direction[dat$Species == "BOT"])
+table(dat$Flight.Direction[dat$Species == "W"], dat$Swim.Direction[dat$Species == "W"])
+table(dat$Flight.Direction[dat$Species == "HH"], dat$Swim.Direction[dat$Species == "HH"])
+
+
+#distance from transect
+hist(dat_season_south$Dist..from.transect[dat_season_north$Species == "BOT"], xlab = "distance from transect (m)", main = "Southbound distance from transect - Bottlenose dolphin")
+
+bait <- dat_season_south[dat_season_south$Species == "B" & dat_season_south$Length.Size %in% c("S", "M", "L"), ]
+bait$Length.Size <- factor(bait$Length.Size)
+boxplot(bait$Dist..from.transect ~ bait$Length.Size, xlab = "Baitfish size", ylab = "Distance from transect", main = "Southbound distance from transect - baitfish")
+
 
 
 
