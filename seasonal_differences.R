@@ -234,30 +234,42 @@ boxplot(bait$Dist..from.transect ~ bait$Length.Size, xlab = "Baitfish size", yla
 
 # -------------- ARE SIGHTINGS CLUSTERED ALONG THE TRANSECT? ---------------- #
 
-lat <- seq(min(na.omit(dat$Lat)), max(na.omit(dat$Lat)), length.out = 500)
+calculateHopkins <- function(species, dat, direction) {
+  
+  #function to calculate Hopkin's statistic for clustering
+  #species = string denoting species
+  #dat = full data set
+  #direction = string denoting flight direction (N or S)
+  
+  lat <- seq(min(na.omit(dat$Lat)), max(na.omit(dat$Lat)), length.out = 10000)
+  
 
-#hopkins statistic
-
-bot_obs <- dat_season_south[dat_season_south$Species == "BOT" & !is.na(dat_season_south$Lat), ]
-n <- nrow(bot_obs)
-
-
-chosen_point <- sample(lat, n, replace = FALSE)
-
-Xi <- 0
-for(i in 1:length(chosen_point)) {
-  w <- which.min(abs(bot_obs$Lat - chosen_point[i]))
-  Xi[i] <- gcd.hf(deg2rad(chosen_point[i]), 0, deg2rad(bot_obs$Lat[w]), 0)    
+  species_obs <- dat[dat$Species == species & !is.na(dat$Lat) & dat$Flight.Direction == direction, ]
+  n <- nrow(species_obs)
+  
+  
+  chosen_point <- sample(lat, n, replace = FALSE)
+  
+  Xi <- 0
+  for(i in 1:length(chosen_point)) {
+    w <- which.min(abs(species_obs$Lat - chosen_point[i]))
+    Xi[i] <- gcd.hf(deg2rad(chosen_point[i]), 0, deg2rad(species_obs$Lat[w]), 0)    
+  }
+  
+  Yi <- 0
+  for(i in 1:n) {
+    rem_obs <- species_obs$Lat[-i]
+    w <- which.min(abs(rem_obs - species_obs$Lat[i]))
+    Yi[i] <- gcd.hf(deg2rad(species_obs$Lat[i]), 0, deg2rad(rem_obs[w]), 0)    
+  }
+  
+  Hf <- sum(Xi^2)/sum(Yi^2) #Hf > 0.5 indicates clustering
+  
+  return(Hf)
+  
 }
 
-Yi <- 0
-for(i in 1:n) {
-  rem_obs <- bot_obs$Lat[-i]
-  w <- which.min(abs(rem_obs - bot_obs$Lat[i]))
-  Yi[i] <- gcd.hf(deg2rad(bot_obs$Lat[i]), 0, deg2rad(rem_obs[w]), 0)    
-}
-
-Hf <- sum(Xi^2)/sum(Yi^2) #Hf > 0.5 indicates clustering
+calculateHopkins(species = "BOT", dat = dat, direction = "N")
 
 
 
