@@ -63,7 +63,8 @@ axis(1, at = c(10, 150, 350, 450, 560), c("Summer 13/14", "April 14", "Sept 14",
 # -------------------- SIGHTINGS AT EACH ENVIRONTMENTAL LEVEL ---------------- #
 dat_season_north <- dat_north[dat_north$Species %in% c("B", "BOT", "HH", "W"), ]
 dat_season_south <- dat_south[dat_south$Species %in% c("B", "BOT", "HH", "W"), ]
-
+dat_season_north$Species <- factor(dat_season_north$Species)
+dat_season_south$Species <- factor(dat_season_south$Species)
 
 #sea state
 north_tab <- table(dat_season_north$Beaufort.Sea.State, dat_season_north$Species)
@@ -309,6 +310,25 @@ calculateKolmogorovSmirnoff("B", dat, "S")
 
 
 # ----------------------- TEST SEASONAL DIFFERENCES -------------------------- #
+season_tab <- table(dat_season_north$Date, dat_season_north$Season)
+season_tab[season_tab > 0] <- 1
+days_per_season <- colSums(season_tab)
+table(dat_season_north$Species, dat_season_north$Season)/rep(days_per_season, each = 4)
+
+
+d <- dat_season_north
+d$Species <- rep(1, nrow(d))
+sighting_tab <- table(d$Date, d$Species)
+
+lm.dat <- as.matrix(cbind(rownames(sighting_tab), sighting_tab[, 1], as.character(dat$Season[dat$Type == "SS" & dat$Flight.Direction == "N"])))
+colnames(lm.dat) <- c("date", "sightings", "season")
+
+lm.season <- lm(lm.dat[, 2] ~ lm.dat[, 3])
+summary(lm.season)
+
+
+
+
 
 
 
