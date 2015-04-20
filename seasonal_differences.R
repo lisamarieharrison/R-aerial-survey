@@ -323,10 +323,10 @@ sighting_tab <- table(d$Date, d$Species)
 lm.dat <- as.matrix(cbind(rownames(sighting_tab), sighting_tab[, 1], as.character(dat$Season[dat$Type == "SS" & dat$Flight.Direction == "N"])))
 colnames(lm.dat) <- c("date", "sightings", "season")
 
-lm.season <- lm(lm.dat[, 2] ~ lm.dat[, 3])
+lm.season <- lm(as.numeric(lm.dat[, 2]) ~ lm.dat[, 3])
 summary(lm.season)
 
-
+boxplot(as.numeric(lm.dat[, 2]) ~ lm.dat[, 3])
 
 
 
