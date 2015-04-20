@@ -232,6 +232,34 @@ bait$Length.Size <- factor(bait$Length.Size)
 boxplot(bait$Dist..from.transect ~ bait$Length.Size, xlab = "Baitfish size", ylab = "Distance from transect", main = "Southbound distance from transect - baitfish")
 
 
+# -------------- ARE SIGHTINGS CLUSTERED ALONG THE TRANSECT? ---------------- #
+
+lat <- seq(min(na.omit(dat$Lat)), max(na.omit(dat$Lat)), length.out = 500)
+
+#hopkins statistic
+
+bot_obs <- dat_season_south[dat_season_south$Species == "BOT" & !is.na(dat_season_south$Lat), ]
+n <- nrow(bot_obs)
+
+
+chosen_point <- sample(lat, n, replace = FALSE)
+
+Xi <- 0
+for(i in 1:length(chosen_point)) {
+  w <- which.min(abs(bot_obs$Lat - chosen_point[i]))
+  Xi[i] <- gcd.hf(deg2rad(chosen_point[i]), 0, deg2rad(bot_obs$Lat[w]), 0)    
+}
+
+Yi <- 0
+for(i in 1:n) {
+  rem_obs <- bot_obs$Lat[-i]
+  w <- which.min(abs(rem_obs - bot_obs$Lat[i]))
+  Yi[i] <- gcd.hf(deg2rad(bot_obs$Lat[i]), 0, deg2rad(rem_obs[w]), 0)    
+}
+
+Hf <- sum(Xi^2)/sum(Yi^2) #Hf > 0.5 indicates clustering
+
+
 
 
 
