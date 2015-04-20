@@ -276,8 +276,6 @@ calculateHopkins(species = "BOT", dat = dat, direction = "N")
 
 
 #kolmogorov-smirnoff to compare poisson
-
-
 calculateKolmogorovSmirnoff <- function(species, dat, direction) {
  
   #tests if sighting rate is poisson using Kolmogorov-Smirnoff test
@@ -292,20 +290,25 @@ calculateKolmogorovSmirnoff <- function(species, dat, direction) {
   
   event_spacing <- 0
   for (i in 2:length(species_obs$Lat)) {
-    event_spacing[i] <- sort(species_obs$Lat)[i] - sort(species_obs$Lat)[i - 1]
+    event_spacing[i] <- gcd.hf(deg2rad(sort(species_obs$Lat)[i]), 0, deg2rad(sort(species_obs$Lat)[i - 1]), 0)
   }
   
   sim_event_spacing <- 0
   for (i in 2:length(chosen_point)) {
-    sim_event_spacing[i] <- sort(chosen_point)[i] - sort(chosen_point)[i - 1]
+    sim_event_spacing[i] <- gcd.hf(deg2rad(sort(chosen_point)[i]), 0, deg2rad(sort(chosen_point)[i - 1]), 0)
   }
   
-  ks.test(event_spacing, sim_event_spacing)
-    
+  lambda = mean(sim_event_spacing)
+  pois_rgen <- rpois(n, lambda)
+  
+  ks.test(event_spacing, pois_rgen)    
+  
 }
 
 calculateKolmogorovSmirnoff("B", dat, "S")
 
+
+# ----------------------- TEST SEASONAL DIFFERENCES -------------------------- #
 
 
 
