@@ -6,6 +6,7 @@ setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/R/data")
 source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/fun_calculate_envt_effort.R")
 dat <- read.csv("full_data_set_20150410.csv", header = T)
 library(chron)
+library(stats)
 dat$Time <- chron(times. = dat$Time, format = "h:m:s")
 dat$Date <- chron(dates. = as.character(dat$Date), format = "d/m/y")
 
@@ -234,9 +235,11 @@ boxplot(bait$Dist..from.transect ~ bait$Length.Size, xlab = "Baitfish size", yla
 
 # -------------- ARE SIGHTINGS CLUSTERED ALONG THE TRANSECT? ---------------- #
 
+#Hopkin's statistic
 calculateHopkins <- function(species, dat, direction) {
   
   #function to calculate Hopkin's statistic for clustering
+  #formula from Skaug (2006)
   #species = string denoting species
   #dat = full data set
   #direction = string denoting flight direction (N or S)
@@ -272,6 +275,36 @@ calculateHopkins <- function(species, dat, direction) {
 calculateHopkins(species = "BOT", dat = dat, direction = "N")
 
 
+#kolmogorov-smirnoff to compare poisson
+
+
+calculateKolmogorovSmirnoff <- function(species, dat, direction) {
+ 
+  #tests if sighting rate is poisson using Kolmogorov-Smirnoff test
+  #species = string containing species code
+  #dat = full data set
+  #direction = string containing flight direction
+  
+  lat <- seq(min(na.omit(dat$Lat)), max(na.omit(dat$Lat)), length.out = 10000)
+  species_obs <- dat[dat$Species == species & !is.na(dat$Lat) & dat$Flight.Direction == direction, ]
+  n <- nrow(species_obs)  
+  chosen_point <- sample(lat, n, replace = FALSE)
+  
+  event_spacing <- 0
+  for (i in 2:length(species_obs$Lat)) {
+    event_spacing[i] <- sort(species_obs$Lat)[i] - sort(species_obs$Lat)[i - 1]
+  }
+  
+  sim_event_spacing <- 0
+  for (i in 2:length(chosen_point)) {
+    sim_event_spacing[i] <- sort(chosen_point)[i] - sort(chosen_point)[i - 1]
+  }
+  
+  ks.test(event_spacing, sim_event_spacing)
+    
+}
+
+calculateKolmogorovSmirnoff("B", dat, "S")
 
 
 
