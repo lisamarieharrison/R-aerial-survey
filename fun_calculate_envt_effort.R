@@ -51,7 +51,7 @@ calculateEffort <- function(dat) {
         mins <- hours(time.stop - time.start)*60 + minutes(time.stop - time.start)
         
         #add minute differences to each environmental level
-        for (k in c(22, 25, 26, 29)) {
+        for (k in c(23, 26, 27, 29)) {
           w <- which(colnames(envt.var) == as.name(paste(names(dat)[k], ".", dat[dat$Date == i, ][j, k], sep = "")))
           envt.var[1, w] <- envt.var[1, w] + mins
         }
