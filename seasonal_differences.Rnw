@@ -35,7 +35,7 @@ dat_season_north$Species <- factor(dat_season_north$Species)
 dat_season_south$Species <- factor(dat_season_south$Species)
 @
 
-To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{effort_north$total}hours on-effort flown in the Northern direction and \Sexpr{effort_south$total}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times.
+To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{effort_north$total}hours on-effort flown in the Northern direction and \Sexpr{effort_south$total}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times.
 
 \paragraph{Seasonal differences}
 
@@ -50,35 +50,26 @@ par(mfrow = c(2, 2))
 dat <- dat[order(dat$Date), ]
 sightings_tab <- table(dat$Date, dat$Species)
 d <- range(dat$Date)
-par(mfrow = c(2, 2))
 
 #baitfish
-x <- seq(d[1], d[2])
-y <- rep(0, length(x))
-y[x %in% unique(dat$Date)] <- sightings_tab[, which(colnames(sightings_tab) == "B")]
-barplot(y, main = "Baitfish sightings", col = "gray23")
-axis(1, at = c(10, 150, 350, 450, 560), c("Summer 13/14", "April 14", "Sept 14", "Summer 14/15", "April 15"))
+y <- sightings_tab[, which(colnames(sightings_tab) == "B")]
+x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+boxplot(y ~ x, main = "Baitfish", ylab = "Sightings/day")
 
 #bottlenose dolphin
-x <- seq(d[1], d[2])
-y <- rep(0, length(x))
-y[x %in% unique(dat$Date)] <- sightings_tab[, which(colnames(sightings_tab) == "BOT")]
-barplot(y, main = "Bottlenose dolphin sightings", col = "gray23")
-axis(1, at = c(10, 150, 350, 450, 560), c("Summer 13/14", "April 14", "Sept 14", "Summer 14/15", "April 15"))
+y <- sightings_tab[, which(colnames(sightings_tab) == "BOT")]
+x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+boxplot(y ~ x, main = "Bottlenose dolphin", ylab = "Sightings/day")
 
 #hammerhead shark
-x <- seq(d[1], d[2])
-y <- rep(0, length(x))
-y[x %in% unique(dat$Date)] <- sightings_tab[, which(colnames(sightings_tab) == "HH")]
-barplot(y, main = "Hammerhead shark sightings", col = "gray23")
-axis(1, at = c(10, 150, 350, 450, 560), c("Summer 13/14", "April 14", "Sept 14", "Summer 14/15", "April 15"))
+y <- sightings_tab[, which(colnames(sightings_tab) == "HH")]
+x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+boxplot(y ~ x, main = "Hammerhead shark", ylab = "Sightings/day")
 
 #White shark 
-x <- seq(d[1], d[2])
-y <- rep(0, length(x))
-y[x %in% unique(dat$Date)] <- sightings_tab[, which(colnames(sightings_tab) == "W")]
-barplot(y, main = "White shark sightings", col = "gray23")
-axis(1, at = c(10, 150, 350, 450, 560), c("Summer 13/14", "April 14", "Sept 14", "Summer 14/15", "April 15"))
+y <- sightings_tab[, which(colnames(sightings_tab) == "W")]
+x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+boxplot(y ~ x, main = "White shark", ylab = "Sightings/day")
 
 dev.off()
 
@@ -186,6 +177,8 @@ These results indicate that north and southbound flights must be separately corr
 \includegraphics{sightingsEnvironmentalLevelSouth.png}\\
 \caption{\textit{Sightings/hr in the Southbound direction}}\\
 
+There is no apparent relationship between tide height and number of sightings that day for any species (see plots below).
+
 <<tide, echo=false, results=hide>>=
 #tide data
 tide_tab <- table(dat$Species, dat$Tide)
@@ -198,10 +191,10 @@ png("tide.png")
 
 par(mfrow = c(2, 2))
 
-barplot(tide_tab[species[1], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "baitfish sightings at tide heights")
-barplot(tide_tab[species[2], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "dolphin sightings at tide heights")
-barplot(tide_tab[species[3], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "hammerhead sightings at tide heights")
-barplot(tide_tab[species[4], ]/date_weight, beside = TRUE, xlab = "tide height (m)", main = "white shark sightings at tide heights")
+plot(tide_tab[species[1], ]/date_weight, xlab = "tide height (m)", main = "baitfish sightings at tide heights", pch = 19)
+plot(tide_tab[species[2], ]/date_weight, xlab = "tide height (m)", main = "dolphin sightings at tide heights", pch = 19)
+plot(tide_tab[species[3], ]/date_weight, xlab = "tide height (m)", main = "hammerhead sightings at tide heights", pch = 19)
+plot(tide_tab[species[4], ]/date_weight, xlab = "tide height (m)", main = "white shark sightings at tide heights", pch = 19)
 dev.off()
 @
 
@@ -335,10 +328,10 @@ species <- which(rownames(lat_tab) %in% c("B", "BOT", "HH", "W"))
 
 png("speciesLatitude.png")
 par(mfrow = c(2, 2))
-barplot(lat_tab[species[1], ], beside = TRUE, main = "# of baitfish sightings at each latitude", xlab = "latitude", ylab = "total sightings")
-barplot(lat_tab[species[2], ], beside = TRUE, main = "# of dolphin sightings at each latitude", xlab = "latitude", ylab = "total sightings")
-barplot(lat_tab[species[3], ], beside = TRUE, main = "# of hammerhead sightings at each latitude", xlab = "latitude", ylab = "total sightings")
-barplot(lat_tab[species[4], ], beside = TRUE, main = "# of white shark sightings at each latitude", xlab = "latitude", ylab = "total sightings")
+plot(lat_tab[species[1], ], main = "# of baitfish sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
+plot(lat_tab[species[2], ], main = "# of dolphin sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
+plot(lat_tab[species[3], ], main = "# of hammerhead sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
+plot(lat_tab[species[4], ], main = "# of white shark sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
 dev.off()
 @
 
