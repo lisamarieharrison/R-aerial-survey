@@ -35,11 +35,11 @@ dat_season_north$Species <- factor(dat_season_north$Species)
 dat_season_south$Species <- factor(dat_season_south$Species)
 @
 
-To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{effort_north$total}hours on-effort flown in the Northern direction and \Sexpr{effort_south$total}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times.
+To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{effort_north$total/60}hours on-effort flown in the Northern direction and \Sexpr{effort_south$total/60}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times.
 
 \paragraph{Seasonal differences}
 
-There are obvious seasonal differences seen in the shark species, with a higher number of hammerhead and white sharks seen in Summer and very few in Autumn. However seasonal differences are more difficult to discern for bottlenose dolphins and baitfish. The barplots for each species below show the number of sightings on each survey day.
+There are obvious seasonal differences seen in the shark species, with a higher number of hammerhead and white sharks seen in Summer and very few in Autumn. However seasonal differences are more difficult to discern for bottlenose dolphins and baitfish. The boxplots for each species below show the number of sightings on each survey day.
 
 <<speciesHist, echo=false, results=hide>>=
 
@@ -85,8 +85,6 @@ There are no significant differences between the number of sightings/survey betw
 season_tab <- table(dat_season_north$Date, dat_season_north$Season)
 season_tab[season_tab > 0] <- 1
 days_per_season <- colSums(season_tab)
-table(dat_season_north$Species, dat_season_north$Season)/rep(days_per_season, each = 4)
-
 
 d <- dat_season_north
 d$Species <- rep(1, nrow(d))
@@ -97,6 +95,26 @@ colnames(lm.dat) <- c("date", "sightings", "season")
 
 lm.season <- lm(as.numeric(lm.dat[, 2]) ~ lm.dat[, 3])
 @
+
+The total number of fish schools seen in each season was different, however the percentacge of sightings that are Small, Medium or Large might be different in each season. To check this, a stacked barplot showing the proportion of baitfish schools that were Small, Medium or Large during each season are shown below. The size composition of the sightings is very close during Autumn, Spring and Summer, with no obvious seasonal differences. During all seasons, most fish schools were Small, followed by Medium and then Large. Note: South and northbound data are pooled in this plot.
+
+<<fishSchoolSizeSeason, echo=false, results=hide>>=
+fish_size <- dat_season_north[dat_season_north$Length.Size %in% c("S", "M", "L") & dat_season_north$Species == "B", ]
+fish_size$Length.Size <- factor(fish_size$Length.Size)
+
+fish_tab <- table(fish_size$Length.Size, fish_size$Season)
+total_sightings <- colSums(fish_tab)
+percentage_size <- fish_tab/rep(total_sightings, each = 3)
+
+png("fishSchooSizeSeason.png")
+
+barplot(percentage_size, legend = T, main = "Proportion of baitfish of each size", ylab = "Proportion of fish schools seen during season")
+
+dev.off()
+
+@
+
+\includegraphics{fishSchooSizeSeason}
 
 \paragraph{Environmental condition influence}
 
@@ -202,7 +220,7 @@ dev.off()
 
 \paragraph{Relationship of shark and dolphin sightings to baitfish}
 
-Dolphin and shark sightings may be seen near baitfish schools since they are an important food source. As the transect width (300m) is negligable compared to the transect length (~250km), only the latitudinal distance between sightings is calculated. The distance is calculated using the Haversine function.
+Dolphin and sharks may be seen near baitfish schools since they are an important food source. As the transect width (300m) is negligable compared to the transect length (~250km), only the latitudinal distance between sightings is calculated. The distance is calculated using the Haversine function which accounts for the curvature of the earth. The distance to the closest fish school seen on the same day as the dolphin or shark sighting was calculated, and a histogram is shown below.
 
 <<calcDistanceBetweenSightings, echo=false>>=
 
@@ -232,32 +250,23 @@ gcd.hf <- function(lat1, long1, lat2, long2) {
 }
 
 #calculate distances between all sightings on the same day
-distance <- matrix(0, nrow = nrow(dat_season_north), ncol = nrow(dat_season_north))
-for (i in 1:nrow(dat_season_north)) {
-  for (j in 1:nrow(dat_season_north)) {
-    if (dat_season_north$Date[i] == dat_season_north$Date[j]) {
-      distance[i, j] <- gcd.hf(deg2rad(dat_season_north$Lat[i]), deg2rad(dat_season_north$Long[i]), deg2rad(dat_season_north$Lat[j]), deg2rad(dat_season_north$Long[j]))    
+distance <- matrix(0, nrow = nrow(dat), ncol = nrow(dat))
+for (i in 1:nrow(dat)) {
+  for (j in 1:nrow(dat)) {
+    if(dat$Flight.Direction[i] == dat$Flight.Direction[j]) {
+      if (dat$Date[i] == dat$Date[j]) {
+        distance[i, j] <- gcd.hf(deg2rad(dat$Lat[i]), deg2rad(dat$Long[i]), deg2rad(dat$Lat[j]), deg2rad(dat$Long[j])) 
+      }
     }
   }
 }
 
-species <- dat_season_north$Species
+species <- dat$Species
 bot <- which(species == "BOT")
 bait <- which(species == "B")
 white <- which(species == "W")
 distance[distance == 0] <- NA
 @
-
-<<distanceBetweenSightings, echo=false, results=hide>>=
-png("distanceBetweenSightings.png")
-par(mfrow = c(1, 2))
-hist(distance[bot, bait], xlab = "km", main = "Bottlenose dolphin", col = "lightgrey")
-hist(distance[white, bait], xlab = "km", main = "White sharks", col = "lightgrey")
-dev.off()
-@
-
-\includegraphics{distanceBetweenSightings}\\*
-\caption{\textit{Distance between dolphin and shark sightings and all baitfish seen on the same day}}\\
 
 <<minDistToFish, echo=false, results=hide>>=
 #minimum distance to fish from each sighting
@@ -276,26 +285,17 @@ dev.off()
 \includegraphics{minDistToFish}\\*
 \caption{\textit{Distance to closest baitfish school}}\\
 
-<<fishWithin10km, echo=false, results=hide>>=
-#number of baitfish within 10km of each sighting
-png("fishWithing10km.png")
-par(mfrow = c(1, 2))
-bot10k <- distance[bot, bait]
-bot10k[bot10k > 10] <- NA
-bot10k[bot10k <= 10] <- 1
-fish_within_10k <- apply(bot10k, 1, sum, na.rm = TRUE)
-hist(fish_within_10k, breaks = seq(0, max(fish_within_10k), by = 0.5), col = "lightgrey")
+The size of the closest fish school might be important. Given the few number of white shark sightings, only the closest fish school size (Small, Medium or Large) to bottlenose dolphins is shown below. Note: Both north and southbound flights are pooled for this plot.
 
-white10k <- distance[white, bait]
-white10k[white10k > 10] <- NA
-white10k[white10k <= 10] <- 1
-fish_within_10k <- apply(white10k, 1, sum, na.rm = TRUE)
-hist(fish_within_10k, breaks = seq(0, max(fish_within_10k), by = 0.5), col = "lightgrey")
-dev.off()
+<<closestFishSize, echo=false, results=hide>>=
+
+min_dist_to_fish <- apply(distance[bot, bait], 1, which.min)
+closest_size <- dat_season_north$Length.Size[dat_season_north$Species == "B"][unlist(min_dist_to_fish)]
+closest_size <- closest_size[closest_size %in% c("S", "M", "L")]
+closest_size <- factor(closest_size)
+plot(closest_size, main = "Size of closest fish school to bottlenose dolphin sighting (S = Small, M = Medium, L = Large", ylab = "Frequency")
+
 @
-
-\includegraphics{fishWithing10km}\\*
-\caption{\textit{Number of baitfish schools within 10km of sighting}}\\
 
 Pooling data from all surveys may help identify areas of general high prey density, if any exist. The distance of each bottlenose dolphin and white shark sighting to pooled baitfish sightings is shown below.
 
