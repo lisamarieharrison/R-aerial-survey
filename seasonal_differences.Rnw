@@ -35,7 +35,7 @@ dat_season_north$Species <- factor(dat_season_north$Species)
 dat_season_south$Species <- factor(dat_season_south$Species)
 @
 
-To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{effort_north$total/60}hours on-effort flown in the Northern direction and \Sexpr{effort_south$total/60}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times.
+To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{round(effort_north$total/60, 2)}hours on-effort flown in the Northern direction and \Sexpr{round(effort_south$total/60, 2)}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times. Note: There was one extra day that was deleted from this analysis (26/1/2015) due to bad weather (sea state 4-5 during most of the survey). This survey was flown only because it was a public holiday.
 
 \paragraph{Seasonal differences}
 
@@ -77,7 +77,8 @@ dev.off()
 
 \includegraphics{speciesHist}
 
-There are no significant differences between the number of sightings/survey between seasons. This basic analysis is currently not including environmental conditions. It is still possible that there is a difference in the number of sightings per survey across seasons however that is masked by worse environmental conditions in one season. While it appears that there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14. This may indicate an annual difference between the two summers, or it may be an artifact of the survey schedule. As Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern as there is no measure of the learning curve of the observer.
+There is no significant difference in the number of sightings/day across seasons. This basic analysis does not weighting sightings by environmental condition level, which may mask a season with more sightings but very bad sighting conditions, making it appear that there were the same number of sightings across all seasons. 
+
 
 <<testSeasonalDifferences, echo=false>>=
 
@@ -96,7 +97,36 @@ colnames(lm.dat) <- c("date", "sightings", "season")
 lm.season <- lm(as.numeric(lm.dat[, 2]) ~ lm.dat[, 3])
 @
 
-The total number of fish schools seen in each season was different, however the percentacge of sightings that are Small, Medium or Large might be different in each season. To check this, a stacked barplot showing the proportion of baitfish schools that were Small, Medium or Large during each season are shown below. The size composition of the sightings is very close during Autumn, Spring and Summer, with no obvious seasonal differences. During all seasons, most fish schools were Small, followed by Medium and then Large. Note: South and northbound data are pooled in this plot.
+To check whether sighting conditions varied greatly across seasons, and may have masked a difference in sightings, the proportion of hours flown during each season at different environmental levels is plotted below. There were slight differences in conditions seen between seasons. There was the clearest water in Summer, lowest cloud cover in Spring and the lowest Sea State in Spring. Assessing how environmental conditions is difficult because no season is overall "worse" in all aspects than the other seasons.
+
+<<seasonEnvt, echo=false, results=hide>>=
+
+png("seasonEnvt.png")
+
+par(mfrow = c(2, 2), mar=c(5, 5, 4, 8))
+sea_state_tab <- table(dat$Beaufort.Sea.State, dat$Season)
+season_totals <- colSums(sea_state_tab)
+weighted_sea_state <- sea_state_tab/rep(season_totals, each = nrow(sea_state_tab))
+weighted_sea_state <- weighted_sea_state[c(2:5), ] #remove sea state 0 because insignificant
+barplot(weighted_sea_state, legend = T, main = "Proportion of time at each sea state", args.legend = list(x = ncol(weighted_sea_state) + 2.5, y=1, bty = "n", cex = 0.8))
+
+turbidity_tab <- table(dat$Water.clarity, dat$Season)
+season_totals <- colSums(turbidity_tab)
+weighted_turbidity <- turbidity_tab/rep(season_totals, each = nrow(turbidity_tab))
+barplot(weighted_turbidity, legend = T, main = "Proportion of time at each turbidity", args.legend = list(x = ncol(weighted_sea_state) + 2.5, y=1, bty = "n", cex = 0.8)) 
+
+cloud_tab <- table(dat$Cloud.cover, dat$Season)
+season_totals <- colSums(cloud_tab)
+weighted_cloud <- cloud_tab/rep(season_totals, each = nrow(cloud_tab))
+barplot(weighted_cloud, legend = T, main = "Proportion of time at each cloud cover", args.legend = list(x = ncol(weighted_sea_state) + 2.5, y=1, bty = "n", cex = 0.8)) 
+
+dev.off()
+
+@
+
+\includegraphics{seasonEnvt}
+
+The total number of fish schools seen in each season was different, however the percentage of sightings that are Small, Medium or Large might be different in each season. To check this, a stacked barplot showing the proportion of baitfish schools that were Small, Medium or Large during each season are shown below. The size composition of the sightings is very close during Autumn, Spring and Summer, with no obvious seasonal differences. During all seasons, most fish schools were Small, followed by Medium and then Large. Note: South and northbound data are pooled in this plot.
 
 <<fishSchoolSizeSeason, echo=false, results=hide>>=
 fish_size <- dat_season_north[dat_season_north$Length.Size %in% c("S", "M", "L") & dat_season_north$Species == "B", ]
@@ -115,6 +145,10 @@ dev.off()
 @
 
 \includegraphics{fishSchooSizeSeason}
+
+\paragraph{Annual differences}
+
+While it appears that there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14. This may indicate an annual difference between the two summers, or it may be an artifact of the survey schedule. As Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern as there is no measure of the learning curve of the observer.
 
 \paragraph{Environmental condition influence}
 
@@ -252,12 +286,9 @@ gcd.hf <- function(lat1, long1, lat2, long2) {
 #calculate distances between all sightings on the same day
 distance <- matrix(0, nrow = nrow(dat), ncol = nrow(dat))
 for (i in 1:nrow(dat)) {
-  for (j in 1:nrow(dat)) {
-    if(dat$Flight.Direction[i] == dat$Flight.Direction[j]) {
-      if (dat$Date[i] == dat$Date[j]) {
-        distance[i, j] <- gcd.hf(deg2rad(dat$Lat[i]), deg2rad(dat$Long[i]), deg2rad(dat$Lat[j]), deg2rad(dat$Long[j])) 
-      }
-    }
+  w <- which(dat$Flight.Direction == dat$Flight.Direction[i] & dat$Date == dat$Date[i])
+  for (j in w) {
+    distance[i, j] <- gcd.hf(deg2rad(dat$Lat[i]), deg2rad(dat$Long[i]), deg2rad(dat$Lat[j]), deg2rad(dat$Long[j])) 
   }
 }
 
@@ -285,37 +316,19 @@ dev.off()
 \includegraphics{minDistToFish}\\*
 \caption{\textit{Distance to closest baitfish school}}\\
 
-The size of the closest fish school might be important. Given the few number of white shark sightings, only the closest fish school size (Small, Medium or Large) to bottlenose dolphins is shown below. Note: Both north and southbound flights are pooled for this plot.
+The size of the closest fish school might be important. Given the few number of white shark sightings, only the closest fish school size (Small, Medium or Large) to bottlenose dolphins is shown below. Times when the closes fish sighting is >5km away are not shown. Note: Both north and southbound flights are pooled for this plot. Most closest fish schools are Small, however as most fish schools seen overall are also Small this does not indicate a preference for small fish schools.
 
 <<closestFishSize, echo=false, results=hide>>=
+fish_5k <- distance[bot, bait]
+fish_5k[fish_5k > 10] <- NA
+min_dist_to_fish <- apply(fish_5k, 1, which.min)
 
-min_dist_to_fish <- apply(distance[bot, bait], 1, which.min)
-closest_size <- dat_season_north$Length.Size[dat_season_north$Species == "B"][unlist(min_dist_to_fish)]
+closest_size <- dat$Length.Size[dat$Species == "B"][unlist(min_dist_to_fish)]
 closest_size <- closest_size[closest_size %in% c("S", "M", "L")]
 closest_size <- factor(closest_size)
 plot(closest_size, main = "Size of closest fish school to bottlenose dolphin sighting (S = Small, M = Medium, L = Large", ylab = "Frequency")
 
 @
-
-Pooling data from all surveys may help identify areas of general high prey density, if any exist. The distance of each bottlenose dolphin and white shark sighting to pooled baitfish sightings is shown below.
-
-<<highPreyDensity, echo=false, results=hide>>=
-#distance to baitfish from each sighting (not on same day) to check if sightings in high density prey areas
-distance_all <- matrix(0, nrow = nrow(dat_season_north), ncol = nrow(dat_season_north))
-for (i in 1:nrow(dat_season_north)) {
-  for (j in 1:nrow(dat_season_north)) {
-    distance_all[i, j] <- gcd.hf(deg2rad(dat_season_north$Lat[i]), deg2rad(dat_season_north$Long[i]), deg2rad(dat_season_north$Lat[j]), deg2rad(dat_season_north$Long[j]))    
-  }
-}
-png("highPreyDensity.png")
-par(mfrow = c(1, 2))
-hist(distance_all[bot, bait], main = "Bottlenose dolphin", col = "lightgrey")
-hist(distance_all[white, bait], main = "White shark", col = "lightgrey")
-dev.off()
-@
-
-\includegraphics{highPreyDensity}\\*
-\caption{\textit{Distance of bottlenose dolphin and white shark sightings from baitfish sightings over all days to assess high prey density areas}}\\
 
 \paragraph{Clustering of sightings along the transect}
 
