@@ -12,6 +12,7 @@ source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/fun_cal
 dat <- read.csv("C:/Users/Lisa/Documents/phd/aerial survey/R/data/full_data_set_20150410.csv", header = T)
 library(chron)
 library(stats)
+library(knitr)
 dat$Time <- chron(times. = dat$Time, format = "h:m:s")
 dat$Date <- chron(dates. = as.character(dat$Date), format = "d/m/y")
 
@@ -39,7 +40,7 @@ To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days,
 
 \paragraph{Seasonal differences}
 
-There are obvious seasonal differences seen in the shark species, with a higher number of hammerhead and white sharks seen in Summer and very few in Autumn. However seasonal differences are more difficult to discern for bottlenose dolphins and baitfish. The boxplots for each species below show the number of sightings on each survey day.
+There are visible seasonal differences for all species seen in the boxplots below, which show the number of sightings on each survey. Shark species were seen more in Summer than the other seasons, while baitfish and dolphins were seen more in Spring. It can be seen that for most animals, there was a very large variation in sighting rates within seasons.
 
 <<speciesHist, echo=false, results=hide>>=
 
@@ -48,27 +49,35 @@ png("speciesHist.png")
 par(mfrow = c(2, 2))
 
 dat <- dat[order(dat$Date), ]
-sightings_tab <- table(dat$Date, dat$Species)
-d <- range(dat$Date)
+sightings_tab_n <- table(dat$Date[dat$Flight.Direction == "N"], dat$Species[dat$Flight.Direction == "N"])
+sightings_tab_s <- table(dat$Date[dat$Flight.Direction == "S"], dat$Species[dat$Flight.Direction == "S"])
+
+sightings_tab <- rbind(sightings_tab_n, sightings_tab_s)
+dates <- chron(dates. = row.names(sightings_tab), format = "d/m/y")
+sightings_tab <- data.frame(sightings_tab)
+sightings_tab <- cbind(dates, sightings_tab)
+sightings_tab <- sightings_tab[order(sightings_tab$dates), ]
+sightings_tab$Season <- dat$Season[dat$Date %in% sightings_tab$dates & dat$Type == "SS"]
+
 
 #baitfish
 y <- sightings_tab[, which(colnames(sightings_tab) == "B")]
-x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+x <- sightings_tab$Season
 boxplot(y ~ x, main = "Baitfish", ylab = "Sightings/day")
 
 #bottlenose dolphin
 y <- sightings_tab[, which(colnames(sightings_tab) == "BOT")]
-x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+x <- sightings_tab$Season
 boxplot(y ~ x, main = "Bottlenose dolphin", ylab = "Sightings/day")
 
 #hammerhead shark
 y <- sightings_tab[, which(colnames(sightings_tab) == "HH")]
-x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+x <- sightings_tab$Season
 boxplot(y ~ x, main = "Hammerhead shark", ylab = "Sightings/day")
 
 #White shark 
 y <- sightings_tab[, which(colnames(sightings_tab) == "W")]
-x <- dat$Season[dat$Type == "SS" & dat$Flight.Direction == "S"]
+x <- sightings_tab$Season
 boxplot(y ~ x, main = "White shark", ylab = "Sightings/day")
 
 dev.off()
@@ -77,24 +86,28 @@ dev.off()
 
 \includegraphics{speciesHist}
 
-There is no significant difference in the number of sightings/day across seasons. This basic analysis does not weighting sightings by environmental condition level, which may mask a season with more sightings but very bad sighting conditions, making it appear that there were the same number of sightings across all seasons. 
-
+The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also more bottlenose dolphin sightings in Summer and Spring compared to Autumn. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.\\*
 
 <<testSeasonalDifferences, echo=false>>=
 
-# ----------------------- TEST SEASONAL DIFFERENCES -------------------------- #
-season_tab <- table(dat_season_north$Date, dat_season_north$Season)
-season_tab[season_tab > 0] <- 1
-days_per_season <- colSums(season_tab)
+lmTest <- function(sighting_tab, species) {
+  
+  s <- which(colnames(sighting_tab) == species)
+  lm.season <- lm(as.numeric(sighting_tab[, s]) ~ sighting_tab$Season)
+  return(summary(lm.season)$coefficients[2:3, 4])
+  
+}
 
-d <- dat_season_north
-d$Species <- rep(1, nrow(d))
-sighting_tab <- table(d$Date, d$Species)
+bait <- lmTest(sightings_tab, "B")
+bot <- lmTest(sightings_tab, "BOT")
+hh <- lmTest(sightings_tab, "HH")
+w <- lmTest(sightings_tab, "W")
 
-lm.dat <- as.matrix(cbind(rownames(sighting_tab), sighting_tab[, 1], as.character(dat$Season[dat$Type == "SS" & dat$Flight.Direction == "N"])))
-colnames(lm.dat) <- c("date", "sightings", "season")
+p_tab <- rbind(bait, bot, hh, w)
+colnames(p_tab) <- c("Spring", "Summer")
 
-lm.season <- lm(as.numeric(lm.dat[, 2]) ~ lm.dat[, 3])
+kable(p_tab, format = "pandoc", caption = "P-values for seasonal differences in the number of sightings/survey for baitfish, bottlenose dolphins, hammerhead and white sharks")
+
 @
 
 To check whether sighting conditions varied greatly across seasons, and may have masked a difference in sightings, the proportion of hours flown during each season at different environmental levels is plotted below. There were slight differences in conditions seen between seasons. There was the clearest water in Summer, lowest cloud cover in Spring and the lowest Sea State in Spring. Assessing how environmental conditions is difficult because no season is overall "worse" in all aspects than the other seasons.
@@ -458,7 +471,7 @@ Bottlenose dolphin group size is estimated at the time of the sighting. A histog
 <<groupSize, echo=false, results=hide>>=
 png("groupSize.png")
 par(mfrow = c(1, 1))
-hist(dat$Number[dat$Species == "BOT"], main = "Bottlenose dolphin group size", xlab = "Group size")
+hist(dat$Number[dat$Species == "BOT"], main = "Bottlenose dolphin group size", xlab = "Group size", col = "lightgrey")
 dev.off()
 @
 
