@@ -36,7 +36,13 @@ dat_season_north$Species <- factor(dat_season_north$Species)
 dat_season_south$Species <- factor(dat_season_south$Species)
 @
 
-To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{round(effort_north$total/60, 2)}hours on-effort flown in the Northern direction and \Sexpr{round(effort_south$total/60, 2)}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times. Note: There was one extra day that was deleted from this analysis (26/1/2015) due to bad weather (sea state 4-5 during most of the survey). This survey was flown only because it was a public holiday.
+\paragraph{Executive Summary}
+
+To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{round(effort_north$total/60, 2)}hours on-effort flown in the Northern direction and \Sexpr{round(effort_south$total/60, 2)}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times. Note: There was one extra day that was deleted from this analysis (26/1/2015) due to bad weather (sea state 4-5 during most of the survey). This survey was flown only because it was a public holiday. At the time of writing, there have been two seasons of surveys during both Autumn and Summer, however Spring has only been sampled once.\\*
+
+There was a significant difference in sighting numbers/survey for bottlenose dolphins (more in Spring and Summer), hammerhead sharks (more in Summer) and white sharks (more in Summer), however not for baitfish. However, given the visual difference on the boxplots and the low p-value (p < 0.06) there is likely also a difference for baitfish (less in Summer) that we did not have the power to detect.\\*
+
+The time period so far is not long enough to know whether seasonal changes are due to observer learning in the first season. There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Besides these observational differences, it is not possible to know if there are baitfish or bottlenose dolphin annual differences yet.
 
 \paragraph{Seasonal differences}
 
@@ -86,11 +92,15 @@ dev.off()
 
 \includegraphics{speciesHist}
 
-The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also more bottlenose dolphin sightings in Summer and Spring compared to Autumn. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.\\*
+The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also less bottlenose dolphin sightings/survey in Autumn than in Summer and Spring. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.\\*
 
 <<testSeasonalDifferences, echo=false>>=
 
 lmTest <- function(sighting_tab, species) {
+  
+  #function to test seasonal significance in sighting numbers 
+  #species = string containing the species to test
+  #sighting_tab = table containing the sightings/survey, date and season
   
   s <- which(colnames(sighting_tab) == species)
   lm.season <- lm(as.numeric(sighting_tab[, s]) ~ sighting_tab$Season)
@@ -100,13 +110,13 @@ lmTest <- function(sighting_tab, species) {
 
 bait <- lmTest(sightings_tab, "B")
 bot <- lmTest(sightings_tab, "BOT")
-hh <- lmTest(sightings_tab, "HH")
-w <- lmTest(sightings_tab, "W")
+hammerhead <- lmTest(sightings_tab, "HH")
+white <- lmTest(sightings_tab, "W")
 
-p_tab <- rbind(bait, bot, hh, w)
+p_tab <- rbind(bait, bot, hammerhead, white)
 colnames(p_tab) <- c("Spring", "Summer")
 
-kable(p_tab, format = "pandoc", caption = "P-values for seasonal differences in the number of sightings/survey for baitfish, bottlenose dolphins, hammerhead and white sharks")
+kable(p_tab, format = "pandoc", caption = "P-values for seasonal differences in the number of sightings/survey")
 
 @
 
@@ -114,24 +124,24 @@ To check whether sighting conditions varied greatly across seasons, and may have
 
 <<seasonEnvt, echo=false, results=hide>>=
 
-png("seasonEnvt.png")
+png("seasonEnvt.png", width = 600, height = 600)
 
 par(mfrow = c(2, 2), mar=c(5, 5, 4, 8))
 sea_state_tab <- table(dat$Beaufort.Sea.State, dat$Season)
 season_totals <- colSums(sea_state_tab)
 weighted_sea_state <- sea_state_tab/rep(season_totals, each = nrow(sea_state_tab))
 weighted_sea_state <- weighted_sea_state[c(2:5), ] #remove sea state 0 because insignificant
-barplot(weighted_sea_state, legend = T, main = "Proportion of time at each sea state", args.legend = list(x = ncol(weighted_sea_state) + 2.5, y=1, bty = "n", cex = 0.8))
+barplot(weighted_sea_state, legend = T, main = "Proportion of time at each sea state", args.legend = list(x = ncol(weighted_sea_state) + 1.5, y=1, bty = "n", cex = 0.8))
 
 turbidity_tab <- table(dat$Water.clarity, dat$Season)
 season_totals <- colSums(turbidity_tab)
 weighted_turbidity <- turbidity_tab/rep(season_totals, each = nrow(turbidity_tab))
-barplot(weighted_turbidity, legend = T, main = "Proportion of time at each turbidity", args.legend = list(x = ncol(weighted_sea_state) + 2.5, y=1, bty = "n", cex = 0.8)) 
+barplot(weighted_turbidity, legend = T, main = "Proportion of time at each turbidity", args.legend = list(x = ncol(weighted_sea_state) + 1.5, y=1, bty = "n", cex = 0.8)) 
 
 cloud_tab <- table(dat$Cloud.cover, dat$Season)
 season_totals <- colSums(cloud_tab)
 weighted_cloud <- cloud_tab/rep(season_totals, each = nrow(cloud_tab))
-barplot(weighted_cloud, legend = T, main = "Proportion of time at each cloud cover", args.legend = list(x = ncol(weighted_sea_state) + 2.5, y=1, bty = "n", cex = 0.8)) 
+barplot(weighted_cloud, legend = T, main = "Proportion of time at each cloud cover", args.legend = list(x = ncol(weighted_sea_state) + 1.5, y=1, bty = "n", cex = 0.8)) 
 
 dev.off()
 
@@ -180,23 +190,23 @@ north_tab <- table(dat_season_north$Beaufort.Sea.State, dat_season_north$Species
 species <- which(colnames(north_tab) %in% c("B", "BOT", "HH", "W"))
 north_tab_effort <- north_tab[, species]/(envt_effort[c(1, 4, 6)]/60)
 
-barplot(north_tab_effort, beside = T, legend = T, main = "Sightings/hr at each sea state", xaxt = "n")
-axis(1, at = c(2, 6, 10, 14), c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "White shark"))
+barplot(north_tab_effort, beside = T, legend = T, main = "Sightings/hr at each sea state", xaxt = "n", args.legend = list(x = ncol(north_tab_effort)*4, y=15, bty = "n", y.intersp = 0.5))
+axis(1, at = c(2, 6, 10, 14), c("B", "BOT", "HH", "W"))
 
 #cloud cover
 north_tab <- table(dat_season_north$Cloud.cover, dat_season_north$Species)
 north_tab_effort <- north_tab[, species]/(envt_effort[c(8:16)]/60)
 
-barplot(north_tab_effort, beside = T, main = "Sightings/hr at each cloud cover", xaxt = "n", legend = T, args.legend = c(cex = 0.5))
-axis(1, at = c(5, 18, 29, 40), c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "White shark"))
+barplot(north_tab_effort, beside = T, main = "Sightings/hr at each cloud cover", xaxt = "n", legend = T, args.legend = list(x = ncol(north_tab_effort)*10, y=15, bty = "n", y.intersp = 0.5))
+axis(1, at = c(5, 15, 25, 35), c("B", "BOT", "HH", "W"))
 
 
 #turbidity
 north_tab <- table(dat_season_north$Water.clarity, dat_season_north$Species)
 north_tab_effort <- north_tab[, species]/(envt_effort[c(17:19)]/60)
 
-barplot(north_tab_effort, beside = T, main = "Sightings/hr at each turbidity", xaxt = "n", legend = T)
-axis(1, at = c(2, 6, 10, 14), c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "White shark"))
+barplot(north_tab_effort, beside = T, main = "Sightings/hr at each turbidity", xaxt = "n", legend = T, args.legend = list(x = ncol(north_tab_effort)*4, y=8, bty = "n", y.intersp = 0.5))
+axis(1, at = c(2, 6, 10, 14), c("B", "BOT", "HH", "W"))
 
 dev.off()
 
@@ -209,22 +219,22 @@ south_tab <- table(dat_season_south$Beaufort.Sea.State, dat_season_south$Species
 species <- which(colnames(south_tab) %in% c("B", "BOT", "HH", "W"))
 south_tab_effort <- south_tab[1:3, species]/(envt_effort_south[c(1, 4, 6)]/60)
 
-barplot(south_tab_effort, beside = T, legend = T, main = "Sightings/hr at each sea state", xaxt = "n")
-axis(1, at = c(2, 6, 10, 14), c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "White shark"))
+barplot(south_tab_effort, beside = T, legend = T, main = "Sightings/hr at each sea state", xaxt = "n", args.legend = list(x = ncol(north_tab_effort)*4, y=15, bty = "n", y.intersp = 0.5))
+axis(1, at = c(2, 6, 10, 14), c("B", "BOT", "HH", "W"))
 
 #cloud cover
 south_tab <- table(dat_season_south$Cloud.cover, dat_season_south$Species)
 south_tab_effort <- south_tab[, species]/(envt_effort_south[c(8:16)]/60)
 
-barplot(south_tab_effort, beside = T, main = "Sightings/hr at each cloud cover", xaxt = "n", legend = T, args.legend = c(cex = 0.5))
-axis(1, at = c(5, 18, 29, 40), c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "White shark"))
+barplot(south_tab_effort, beside = T, main = "Sightings/hr at each cloud cover", xaxt = "n", legend = T, args.legend = list(x = ncol(north_tab_effort)*10, y=15, bty = "n", y.intersp = 0.5))
+axis(1, at = c(5, 15, 25, 35), c("B", "BOT", "HH", "W"))
 
 #turbidity
 south_tab <- table(dat_season_south$Water.clarity, dat_season_south$Species)
 south_tab_effort <- south_tab[1:3, species]/(envt_effort_south[c(17:19)]/60)
 
-barplot(south_tab_effort, beside = T, main = "Sightings/hr at each turbidity", xaxt = "n", legend = T)
-axis(1, at = c(2, 6, 10, 14), c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "White shark"))
+barplot(south_tab_effort, beside = T, main = "Sightings/hr at each turbidity", xaxt = "n", legend = T, args.legend = list(x = ncol(north_tab_effort)*4, y=15, bty = "n", y.intersp = 0.5))
+axis(1, at = c(2, 6, 10, 14), c("B", "BOT", "HH", "W"))
 
 dev.off()
 
@@ -237,10 +247,10 @@ Different patterns between sighting rate and turbidity level were seen in the No
 These results indicate that north and southbound flights must be separately corrected for environmental conditions, as they have a different effect on sighting rate depending on flight direction.
 
 \includegraphics{sightingsEnvironmentalLevelNorth.png}\\
-\caption{\textit{Sightings/hr in the Northbound direction}}\\
+\caption{\textit{Sightings/hr in the Northbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White Shark}}\\
 
 \includegraphics{sightingsEnvironmentalLevelSouth.png}\\
-\caption{\textit{Sightings/hr in the Southbound direction}}\\
+\caption{\textit{Sightings/hr in the Southbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White shark}}\\
 
 There is no apparent relationship between tide height and number of sightings that day for any species (see plots below).
 
@@ -256,16 +266,17 @@ png("tide.png")
 
 par(mfrow = c(2, 2))
 
-plot(tide_tab[species[1], ]/date_weight, xlab = "tide height (m)", main = "baitfish sightings at tide heights", pch = 19)
-plot(tide_tab[species[2], ]/date_weight, xlab = "tide height (m)", main = "dolphin sightings at tide heights", pch = 19)
-plot(tide_tab[species[3], ]/date_weight, xlab = "tide height (m)", main = "hammerhead sightings at tide heights", pch = 19)
-plot(tide_tab[species[4], ]/date_weight, xlab = "tide height (m)", main = "white shark sightings at tide heights", pch = 19)
+plot(tide_tab[species[1], ]/date_weight, xlab = "tide height (m)", main = "Baitfish", pch = 19)
+plot(tide_tab[species[2], ]/date_weight, xlab = "tide height (m)", main = "Bottlenose Dolphin", pch = 19)
+plot(tide_tab[species[3], ]/date_weight, xlab = "tide height (m)", main = "Hammerhead Shark", pch = 19)
+plot(tide_tab[species[4], ]/date_weight, xlab = "tide height (m)", main = "White Shark", pch = 19)
 dev.off()
 @
 
 \includegraphics{tide}
+\caption{\textit{Number of sightings at each tide height for Baitfish, Bottlenose Dolphins, Hammerhead Sharks and White Sharks}}\\
 
-\paragraph{Relationship of shark and dolphin sightings to baitfish}
+\paragraph{\textit{Relationship of shark and dolphin sightings to baitfish}}\\
 
 Dolphin and sharks may be seen near baitfish schools since they are an important food source. As the transect width (300m) is negligable compared to the transect length (~250km), only the latitudinal distance between sightings is calculated. The distance is calculated using the Haversine function which accounts for the curvature of the earth. The distance to the closest fish school seen on the same day as the dolphin or shark sighting was calculated, and a histogram is shown below.
 
@@ -354,14 +365,15 @@ species <- which(rownames(lat_tab) %in% c("B", "BOT", "HH", "W"))
 
 png("speciesLatitude.png")
 par(mfrow = c(2, 2))
-plot(lat_tab[species[1], ], main = "# of baitfish sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
-plot(lat_tab[species[2], ], main = "# of dolphin sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
-plot(lat_tab[species[3], ], main = "# of hammerhead sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
-plot(lat_tab[species[4], ], main = "# of white shark sightings at each latitude", xlab = "latitude", ylab = "total sightings", pch = 19)
+plot(lat_tab[species[1], ], main = "Baitfish", xlab = "latitude", ylab = "total sightings", pch = 19)
+plot(lat_tab[species[2], ], main = "Bottlenose dolphin", xlab = "latitude", ylab = "total sightings", pch = 19)
+plot(lat_tab[species[3], ], main = "Hammerhead shark", xlab = "latitude", ylab = "total sightings", pch = 19)
+plot(lat_tab[species[4], ], main = "White shark", xlab = "latitude", ylab = "total sightings", pch = 19)
 dev.off()
 @
 
 \includegraphics{speciesLatitude}
+\caption{\textit{Number of sightings at each latitude for Baitfish, Bottlenose dolphins, Hammerhead sharks and White sharks.}}\\
 
 If sightings are distributed randomly, they should follow a homogeneous Poisson distribution. Two different methods have been used to test this, the Hopkin's statistic and the Kolmogorov-Smirnoff test. The Hopkin's statistic is a ratio of the distance between randomly chosen locations along the transect and their nearest sighting and the distance of randomly chosen sightings from their closest sighting. If clustering is present, the numerator will be larger than the denominator. In general, a Hopkin's test statistic of >0.5 indicates clustering.\\*
 The Kolmogorov-Smirnoff test compares the event spacing (sighting rate) to the expected event spacing if the assumption of a homogeneous Poisson distribution holds. For the reference data set, the sighting locations are randomly chosen along the transect and the mean event spacing is used as the lambda to generate Poission random values. A p-value <0.05 indicates a significant difference in the distributions of the observed and reference data. North and southbound flights are compared separately for both tests. Data from all surveys are pooled to attain a large enough sample size to test for clustering.\\* For all species in both directions, p<0.05 indicating that the sightings are not randomly distributed. The p-value for the shark species is far closer than the bottlenose dolphin or baitfish p-values, which at face value appears to indicate that these species are close to randomly distributed. However, as white sharks were virtually seen in one location along the transect they are highly clustered. It is likely that the test is unable to detect this because the event spacing between all sightings is small (as they are all in the same bay), which gives the illusion of a Poisson distribution. In cases such as this, the Hopkin's statistic is more powerful to detect clustering as it uses locations along the entire transect, not only distance between known sightings.
@@ -476,5 +488,8 @@ dev.off()
 @
 
 \includegraphics{groupSize}
+\caption{\textit{Bottlenose dolphin group size for north and southbound flights}}\\
+
+Bottlenose dolphin group size may vary by latitude, if larger dolphin pods are always seen in the same areas. 
 
 \end{document}
