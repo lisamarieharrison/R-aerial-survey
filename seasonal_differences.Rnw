@@ -6,7 +6,6 @@
 \author{Lisa-Marie Harrison}
 \maketitle
 
-
 <<readData, echo=false>>=
 source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/fun_calculate_envt_effort.R")
 dat <- read.csv("C:/Users/Lisa/Documents/phd/aerial survey/R/data/full_data_set_20150410.csv", header = T)
@@ -38,9 +37,9 @@ dat_season_south$Species <- factor(dat_season_south$Species)
 
 \paragraph{Executive Summary}
 
-To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{round(effort_north$total/60, 2)}hours on-effort flown in the Northern direction and \Sexpr{round(effort_south$total/60, 2)}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times. Note: There was one extra day that was deleted from this analysis (26/1/2015) due to bad weather (sea state 4-5 during most of the survey). This survey was flown only because it was a public holiday. At the time of writing, there have been two seasons of surveys during both Autumn and Summer, however Spring has only been sampled once.\\*
+To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{round(effort_north$total/60, 2)}hours on-effort flown in the Northern direction and \Sexpr{round(effort_south$total/60, 2)}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times. Note: There was one extra day that was deleted from this analysis (26/1/2015) due to bad weather (sea state 4-5 during most of the survey). This survey was flown only because it was a public holiday. At the time of writing, there have been two seasons of surveys during both Autumn and Summer, however Spring has only been sampled once.\\
 
-There was a significant difference in sighting numbers/survey for bottlenose dolphins (more in Spring and Summer), hammerhead sharks (more in Summer) and white sharks (more in Summer), however not for baitfish. However, given the visual difference on the boxplots and the low p-value (p < 0.06) there is likely also a difference for baitfish (less in Summer) that we did not have the power to detect.\\*
+There was a significant difference in sighting numbers/survey for bottlenose dolphins (more in Spring and Summer), hammerhead sharks (more in Summer) and white sharks (more in Summer), however not for baitfish. However, given the visual difference on the boxplots and the low p-value (p < 0.06) there is likely also a difference for baitfish (less in Summer) that we did not have the power to detect.\\
 
 The time period so far is not long enough to know whether seasonal changes are due to observer learning in the first season. There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Besides these observational differences, it is not possible to know if there are baitfish or bottlenose dolphin annual differences yet.
 
@@ -69,28 +68,30 @@ sightings_tab$Season <- dat$Season[dat$Date %in% sightings_tab$dates & dat$Type 
 #baitfish
 y <- sightings_tab[, which(colnames(sightings_tab) == "B")]
 x <- sightings_tab$Season
-boxplot(y ~ x, main = "Baitfish", ylab = "Sightings/day")
+boxplot(y ~ x, main = "Baitfish", ylab = "Sightings/survey")
 
 #bottlenose dolphin
 y <- sightings_tab[, which(colnames(sightings_tab) == "BOT")]
 x <- sightings_tab$Season
-boxplot(y ~ x, main = "Bottlenose dolphin", ylab = "Sightings/day")
+boxplot(y ~ x, main = "Bottlenose dolphin", ylab = "Sightings/survey")
 
 #hammerhead shark
 y <- sightings_tab[, which(colnames(sightings_tab) == "HH")]
 x <- sightings_tab$Season
-boxplot(y ~ x, main = "Hammerhead shark", ylab = "Sightings/day")
+boxplot(y ~ x, main = "Hammerhead shark", ylab = "Sightings/survey")
 
 #White shark 
 y <- sightings_tab[, which(colnames(sightings_tab) == "W")]
 x <- sightings_tab$Season
-boxplot(y ~ x, main = "White shark", ylab = "Sightings/day")
+boxplot(y ~ x, main = "White shark", ylab = "Sightings/survey")
 
 dev.off()
 
 @
 
-\includegraphics{speciesHist}
+\includegraphics{speciesHist}\\
+\caption{\textit{Number of sightings per survey during Autumn, Spring and Summer.}}\\
+
 
 The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also less bottlenose dolphin sightings/survey in Autumn than in Summer and Spring. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.\\*
 
@@ -147,27 +148,8 @@ dev.off()
 
 @
 
-\includegraphics{seasonEnvt}
-
-The total number of fish schools seen in each season was different, however the percentage of sightings that are Small, Medium or Large might be different in each season. To check this, a stacked barplot showing the proportion of baitfish schools that were Small, Medium or Large during each season are shown below. The size composition of the sightings is very close during Autumn, Spring and Summer, with no obvious seasonal differences. During all seasons, most fish schools were Small, followed by Medium and then Large. Note: South and northbound data are pooled in this plot.
-
-<<fishSchoolSizeSeason, echo=false, results=hide>>=
-fish_size <- dat_season_north[dat_season_north$Length.Size %in% c("S", "M", "L") & dat_season_north$Species == "B", ]
-fish_size$Length.Size <- factor(fish_size$Length.Size)
-
-fish_tab <- table(fish_size$Length.Size, fish_size$Season)
-total_sightings <- colSums(fish_tab)
-percentage_size <- fish_tab/rep(total_sightings, each = 3)
-
-png("fishSchooSizeSeason.png")
-
-barplot(percentage_size, legend = T, main = "Proportion of baitfish of each size", ylab = "Proportion of fish schools seen during season")
-
-dev.off()
-
-@
-
-\includegraphics{fishSchooSizeSeason}
+\includegraphics{seasonEnvt}\\
+\caption{\textit{Proportion of total survey time flown at each level of Sea State, Turbidity and Cloud Cover during Autumn, Spring and Summer.}}\\
 
 \paragraph{Annual differences}
 
@@ -273,7 +255,7 @@ plot(tide_tab[species[4], ]/date_weight, xlab = "tide height (m)", main = "White
 dev.off()
 @
 
-\includegraphics{tide}
+\includegraphics{tide}\\
 \caption{\textit{Number of sightings at each tide height for Baitfish, Bottlenose Dolphins, Hammerhead Sharks and White Sharks}}\\
 
 \paragraph{\textit{Relationship of shark and dolphin sightings to baitfish}}\\
@@ -337,7 +319,7 @@ hist(min_dist_to_fish, breaks = 150, main = "White shark", col = "lightgrey")
 dev.off()
 @
 
-\includegraphics{minDistToFish}\\*
+\includegraphics{minDistToFish}\\
 \caption{\textit{Distance to closest baitfish school}}\\
 
 The size of the closest fish school might be important. Given the few number of white shark sightings, only the closest fish school size (Small, Medium or Large) to bottlenose dolphins is shown below. Times when the closes fish sighting is >5km away are not shown. Note: Both north and southbound flights are pooled for this plot. Most closest fish schools are Small, however as most fish schools seen overall are also Small this does not indicate a preference for small fish schools.
@@ -372,7 +354,7 @@ plot(lat_tab[species[4], ], main = "White shark", xlab = "latitude", ylab = "tot
 dev.off()
 @
 
-\includegraphics{speciesLatitude}
+\includegraphics{speciesLatitude}\\
 \caption{\textit{Number of sightings at each latitude for Baitfish, Bottlenose dolphins, Hammerhead sharks and White sharks.}}\\
 
 If sightings are distributed randomly, they should follow a homogeneous Poisson distribution. Two different methods have been used to test this, the Hopkin's statistic and the Kolmogorov-Smirnoff test. The Hopkin's statistic is a ratio of the distance between randomly chosen locations along the transect and their nearest sighting and the distance of randomly chosen sightings from their closest sighting. If clustering is present, the numerator will be larger than the denominator. In general, a Hopkin's test statistic of >0.5 indicates clustering.\\*
@@ -487,9 +469,49 @@ hist(dat$Number[dat$Species == "BOT"], main = "Bottlenose dolphin group size", x
 dev.off()
 @
 
-\includegraphics{groupSize}
+\includegraphics{groupSize}\\
 \caption{\textit{Bottlenose dolphin group size for north and southbound flights}}\\
 
-Bottlenose dolphin group size may vary by latitude, if larger dolphin pods are always seen in the same areas. 
+The total number of fish schools seen in each season was different, however the percentage of sightings that are Small, Medium or Large might be different in each season. To check this, a stacked barplot showing the proportion of baitfish schools that were Small, Medium or Large during each season are shown below. The size composition of the sightings is very close during Autumn, Spring and Summer, with no obvious seasonal differences. During all seasons, most fish schools were Small, followed by Medium and then Large. Note: South and northbound data are pooled in this plot.
+
+<<fishSchoolSizeSeason, echo=false, results=hide>>=
+fish_size <- dat[dat$Length.Size %in% c("S", "M", "L") & dat$Species == "B", ]
+fish_size$Length.Size <- factor(fish_size$Length.Size)
+
+fish_tab <- table(fish_size$Length.Size, fish_size$Season)
+total_sightings <- colSums(fish_tab)
+percentage_size <- fish_tab/rep(total_sightings, each = 3)
+
+png("fishSchooSizeSeason.png")
+
+par(mar = c(4, 4, 4, 6))
+
+barplot(percentage_size, legend = T, main = "Proportion of baitfish of each size", ylab = "Proportion of fish schools seen during season", args.legend = list(x = ncol(percentage_size) + 1.4, y=1, bty = "n"))
+
+dev.off()
+
+@
+
+\includegraphics{fishSchooSizeSeason}\\
+\caption{\textit{Proportion of fish schools by size during Autumn (n = \Sexpr{nrow(fish_size[fish_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(fish_size[fish_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(fish_size[fish_size$Season == "Summer", ])})}}\\
+
+Similar to baitfish, bottlenose dolphin group size may vary across seasons, with larger groups seen during some seasons than others. Since the group size is not categorical like with Baitfish, the group sizes seen during each each season are plotted using boxplots.\\*
+
+Group sizes are very similar for Spring and Summer but may be slightly lower during Autumn. Even if the number of hours surveyed during each season differs, the distribution of group size should be the same (although overall number of sightings might be different). Given the difficulty in accurately estimating dolphin group size (especially for larger groups) the small difference in Autumn compared to the other seasons is likely not notable.
+
+<<botGroupSizeSeason, echo=false, results=hide>>=
+
+bot_size <- dat[dat$Species == "BOT", ]
+
+png("botGroupSizeSeason.png")
+
+boxplot(bot_size$Number ~ bot_size$Season, ylab = "Pod size", main = "Bottlenose dolphin group size for each sighting")
+
+dev.off()
+
+@
+
+\includegraphics{botGroupSizeSeason}\\
+\caption{\textit{Bottlenose dolphin group size recorded during each sighting to assess seasonal differences between Autumn (n = \Sexpr{nrow(bot_size[bot_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(bot_size[bot_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(bot_size[bot_size$Season == "Summer", ])}).}}\\
 
 \end{document}
