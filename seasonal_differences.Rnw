@@ -42,17 +42,13 @@ To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days,
 
 There was a significant difference in sighting numbers/survey for bottlenose dolphins (more in Spring and Summer), hammerhead sharks (more in Summer) and white sharks (more in Summer), however not for baitfish. However, given the visual difference on the boxplots and the low p-value (p < 0.06) there is likely also a difference for baitfish (less in Summer) that we did not have the power to detect.\\
 
-The time period so far is not long enough to know whether seasonal changes are due to observer learning in the first season. There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Besides these observational differences, it is not possible to know if there are baitfish or bottlenose dolphin annual differences yet.
+The time period so far is not long enough to know whether seasonal changes are due to observer learning in the first season. There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Besides these observational differences, it is unclear whether there are baitfish or bottlenose dolphin annual differences.
 
 \section{Seasonal differences}
 
 There are visible seasonal differences for all species seen in the boxplots below, which show the number of sightings on each survey. Hammerhead and white sharks were seen more in Summer than the other seasons, while baitfish and dolphins were seen more in Spring. It can be seen that for most animals, there was a very large variation in sighting rates within seasons.
 
 <<speciesHist, echo=false, results=hide>>=
-
-png("speciesHist.png")
-
-par(mfrow = c(2, 2))
 
 dat <- dat[order(dat$Date), ]
 sightings_tab_n <- table(dat$Date[dat$Flight.Direction == "N"], dat$Species[dat$Flight.Direction == "N"])
@@ -65,6 +61,9 @@ sightings_tab <- cbind(dates, sightings_tab)
 sightings_tab <- sightings_tab[order(sightings_tab$dates), ]
 sightings_tab$Season <- dat$Season[dat$Date %in% sightings_tab$dates & dat$Type == "SS"]
 
+png("speciesHist.png")
+
+par(mfrow = c(2, 2))
 
 #baitfish
 y <- sightings_tab[, which(colnames(sightings_tab) == "B")]
@@ -167,11 +166,11 @@ dev.off()
 \FloatBarrier
 \section{Annual differences}
 
-While it appears that there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14. This may indicate an annual difference between the two summers, or it may be an artifact of the survey schedule. As Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern as there is no measure of the learning curve of the observer.
+While there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14 than any other season. This may indicate an annual difference between the two summers, or it may be an artifact of the survey schedule. As Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern as there is no measure of the learning curve of the observer.
 
 \section{Environmental condition influence}
 
-Environmental conditions are likely to have a large influence on sighting rates. It is expected that there would be less sightings at higher sea states, turbid water and high cloud cover. As sighting effort is highly skewed towards fine weather conditions, the number of sightings at each level cannot be directly compared. Instead the number of hours of effort at each sighting level are calculated and used to weight the number of sightings. The north and south-bound transects are analysed separately, because environmental conditions may affect sightings rates differently depending on whether the observer is looking on- or offshore.
+Environmental conditions are likely to have a large influence on sighting rates. It is expected that there would be less sightings at higher sea states, in turbid water and high cloud cover. As sighting effort is highly skewed towards fine weather conditions, the number of sightings at each level cannot be directly compared. Instead the number of hours of effort at each sighting level are calculated and used to weight the number of sightings. The north and south-bound transects are analysed separately, because environmental conditions may affect sightings rates differently depending on whether the observer is looking onshore or offshore.
 
 <<sightingsEnvironmentalLevelNorth, echo=false, results=hide>>=
 
@@ -227,13 +226,13 @@ These results indicate that north and southbound flights must be separately corr
 \begin{figure}
   \centering
   \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{sightingsEnvironmentalLevelNorth.png}\\
-  \caption{\textit{Sightings/hr in the Northbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White Shark}}
+  \caption{\textit{Sightings/hr in the Northbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White Shark; Turbidity 1 = Excellent, 2 = Good, 3 = Poor}}
 \end{figure}
 
 \begin{figure}
   \centering
   \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{sightingsEnvironmentalLevelSouth.png}\\
-  \caption{\textit{Sightings/hr in the Southbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White shark}}
+  \caption{\textit{Sightings/hr in the Southbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White shark; Turbidity 1 = Excellent, 2 = Good, 3 = Poor}}
 \end{figure}
 
 There is no apparent relationship between tide height and number of sightings that day for any species.
@@ -250,10 +249,10 @@ png("tide.png")
 
 par(mfrow = c(2, 2))
 
-plot(tide_tab[species[1], ]/date_weight, xlab = "tide height (m)", main = "Baitfish", pch = 19)
-plot(tide_tab[species[2], ]/date_weight, xlab = "tide height (m)", main = "Bottlenose Dolphin", pch = 19)
-plot(tide_tab[species[3], ]/date_weight, xlab = "tide height (m)", main = "Hammerhead Shark", pch = 19)
-plot(tide_tab[species[4], ]/date_weight, xlab = "tide height (m)", main = "White Shark", pch = 19)
+plot(tide_tab[species[1], ]/date_weight, xlab = "tide height (m)", main = "Baitfish", pch = 19, ylab = "")
+plot(tide_tab[species[2], ]/date_weight, xlab = "tide height (m)", main = "Bottlenose Dolphin", pch = 19, ylab = "")
+plot(tide_tab[species[3], ]/date_weight, xlab = "tide height (m)", main = "Hammerhead Shark", pch = 19, ylab = "")
+plot(tide_tab[species[4], ]/date_weight, xlab = "tide height (m)", main = "White Shark", pch = 19, ylab = "")
 dev.off()
 @
 
@@ -266,7 +265,7 @@ dev.off()
 \FloatBarrier
 \section{Relationship of shark and dolphin sightings to baitfish}\\
 
-Dolphin and sharks may be seen near baitfish schools since they are an important food source. As the transect width (300m) is negligable compared to the transect length (~250km), only the latitudinal distance between sightings is calculated. The distance is calculated using the Haversine function which accounts for the curvature of the earth. The distance to the closest fish school seen on the same day as the dolphin or shark sighting was calculated, and a histogram is shown below.
+Dolphin and sharks may be seen near baitfish schools since they are an important food source. As the transect width (300m) is negligable compared to the transect length (~250km), only the latitudinal distance between sightings is calculated. The distance is calculated using the Haversine function which accounts for the curvature of the earth. The distance to the closest fish school seen during the same survey as the dolphin or shark sighting was calculated, and boxplots are shown below. On some days when very few sightings were seen, there can be over 50km between the dolphin or shark and the closest fish school seen.
 
 <<calcDistanceBetweenSightings, echo=false>>=
 
@@ -295,7 +294,7 @@ gcd.hf <- function(lat1, long1, lat2, long2) {
   
 }
 
-#calculate distances between all sightings on the same day
+#calculate distances between all sightings on the same day and flight direction
 distance <- matrix(0, nrow = nrow(dat), ncol = nrow(dat))
 for (i in 1:nrow(dat)) {
   w <- which(dat$Flight.Direction == dat$Flight.Direction[i] & dat$Date == dat$Date[i])
@@ -314,24 +313,25 @@ distance[distance == 0] <- NA
 <<minDistToFish, echo=false, results=hide>>=
 #minimum distance to fish from each sighting
 png("minDistToFish.png")
-par(mfrow = c(1, 2))
 min_dist_to_fish <- apply(distance[bot, bait], 1, min, na.rm = TRUE)
 min_dist_to_fish[min_dist_to_fish == "Inf"] <- NA
-hist(min_dist_to_fish, breaks = 150, main = "Bottlenose dolphin", col = "lightgrey")
+min_dist_to_fish_w <- apply(distance[white, bait], 1, min, na.rm = TRUE)
+min_dist_to_fish_w[min_dist_to_fish_w == "Inf"] <- NA
 
-min_dist_to_fish <- apply(distance[white, bait], 1, min, na.rm = TRUE)
-min_dist_to_fish[min_dist_to_fish == "Inf"] <- NA
-hist(min_dist_to_fish, breaks = 150, main = "White shark", col = "lightgrey")
+bot_white <- list(cbind(c(rep("Bottlenose dolphin", length(min_dist_to_fish)), rep("White shark", length(min_dist_to_fish_w))), c(min_dist_to_fish, min_dist_to_fish_w)))
+
+boxplot(as.numeric(bot_white[[1]][, 2]) ~ bot_white[[1]][, 1], ylab = "distance (km)", main = "Distance to closest fish school")
+
 dev.off()
 @
 
 \begin{figure}
   \centering
   \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{minDistToFish}\\
-  \caption{\textit{Distance to closest baitfish school}}
+  \caption{\textit{Distance to closest baitfish school seen on the same day and flight direction as the sighting}}
 \end{figure}
 
-The size of the closest fish school might be important. Given the few number of white shark sightings, only the closest fish school size (Small, Medium or Large) to bottlenose dolphins is shown below. Sightings when the closest fish sighting is >5km away are not shown. Note: Both north and southbound flights are pooled for this plot. Most closest fish schools are Small, however as most fish schools seen overall are also Small this does not indicate a preference for small fish schools.
+The size of the closest fish school might be important. Given the few number of white shark sightings, only the closest fish school size (Small, Medium or Large) to bottlenose dolphins is shown below. Sightings when the closest fish sighting is >5km away are not shown. Most closest fish schools are Small, however as most fish schools seen overall are also Small this does not indicate a preference for small fish schools.
 
 <<closestFishSize, echo=false, results=hide>>=
 fish_5k <- distance[bot, bait]
@@ -459,25 +459,33 @@ calculateKolmogorovSmirnoff("B", dat, "S")
 
 \subsection{Dolphin swim direction}
 
-The swim direction of all dolphin and shark sightings is noted using North-East-South-West or Circling. With the exception of migrating whales, there is not an expectation of which direction the animals will be swimming. No difference was seen in swim direction between north and southbound flights. Only bottlenose dolphin and hammerhead shark sightings are reported in the tables below due to the low number of other shark sightings. As a different number of sightings were seen in the different directions, the tables show the proportion of sightings in the N and S flight Directions where animals were noted as swimming north, south, east, west or circling.
+The swim direction of all dolphin and shark sightings is noted using North-East-South-West or Circling. With the exception of migrating whales, there is not an expectation of which direction the animals will be swimming. No difference was seen in swim direction between north and southbound flights. Only bottlenose dolphins are reported in the plot below due to the low number of shark sightings. As a different number of sightings were seen in the different directions, the proportion of sightings in the N and S flight Directions where animals were noted as swimming north, south or circling is plotted. Note that East and West swim directions have been ommited from the plot due to the small number of occurences (and narrow strip width).
 
 <<swimDirection, echo=false>>=
 #bottlenose dolphin
-swim_dir_bot <- dat[dat$Species == "BOT" & dat$Swim.Direction %in% c("C", "N", "S", "E", "W"), ]
+swim_dir_bot <- dat[dat$Species == "BOT" & dat$Swim.Direction %in% c("C", "N", "S"), ]
 swim_dir_bot$Swim.Direction <- factor(swim_dir_bot$Swim.Direction)
 swim_dir_bot$Flight.Direction <- factor(swim_dir_bot$Flight.Direction)
 bot_sightings_north <- nrow(swim_dir_bot[swim_dir_bot$Flight.Direction == "N", ])
 bot_sightings_south <- nrow(swim_dir_bot[swim_dir_bot$Flight.Direction == "S", ])
-round(table(swim_dir_bot$Flight.Direction, swim_dir_bot$Swim.Direction)/c(bot_sightings_north, bot_sightings_south), 2)
+dir_tab <- round(table(swim_dir_bot$Flight.Direction, swim_dir_bot$Swim.Direction)/c(bot_sightings_north, bot_sightings_south), 2)
 
-#hammerhead shark
-swim_dir_hh <- dat[dat$Species == "HH" & dat$Swim.Direction %in% c("C", "N", "S", "E", "W"), ]
-swim_dir_hh$Swim.Direction <- factor(swim_dir_hh$Swim.Direction)
-swim_dir_hh$Flight.Direction <- factor(swim_dir_hh$Flight.Direction)
-hh_sightings_north <- nrow(swim_dir_hh[swim_dir_hh$Flight.Direction == "N", ])
-hh_sightings_south <- nrow(swim_dir_hh[swim_dir_hh$Flight.Direction == "S", ])
-round(table(swim_dir_hh$Flight.Direction, swim_dir_hh$Swim.Direction)/c(hh_sightings_north, hh_sightings_south), 2)
+png("swimDirection.png")
+
+par(mar = c(4, 4, 4, 6))
+
+barplot(t(dir_tab), beside = F, legend = T, args.legend = list(x = 3, y=1, bty = "n"), xlab = "Flight Direction", ylab = "Proporting of total sightings")
+
+dev.off()
+
 @
+
+\begin{figure}
+  \centering
+  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{swimDirection}\\
+  \caption{\textit{Swim direction of bottlenose dolphin sightings (S = South, N = North, C = Circling as a proportion of total sightings)}}
+\end{figure}
+
 
 \FloatBarrier
 \subsection{Mean dolphin group size}
@@ -493,7 +501,7 @@ dev.off()
 
 \begin{figure}
   \centering
-  \includegraphics{groupSize}\\
+  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{groupSize}\\
   \caption{\textit{Bottlenose dolphin group size for north and southbound flights}}
 \end{figure}
 
@@ -522,13 +530,13 @@ dev.off()
 
 \begin{figure}
   \centering
-  \includegraphics{fishSchooSizeSeason}\\
+  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{fishSchooSizeSeason}\\
   \caption{\textit{Proportion of fish schools by size during Autumn (n = \Sexpr{nrow(fish_size[fish_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(fish_size[fish_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(fish_size[fish_size$Season == "Summer", ])})}}
 \end{figure}
 
 Similar to baitfish, bottlenose dolphin group size may vary across seasons, with larger groups seen during some seasons than others. Since the group size is not categorical like with Baitfish, the group sizes seen during each each season are plotted using boxplots.\\*
 
-Group sizes are very similar for Spring and Summer but may be slightly lower during Autumn. Even if the number of hours surveyed during each season differs, the distribution of group size should be the same (although overall number of sightings might be different). Given the difficulty in accurately estimating dolphin group size (especially for larger groups) the small difference in Autumn compared to the other seasons is likely not notable.
+Group sizes are very similar for Spring and Summer but may be slightly lower during Autumn. Even if the number of on effort hours during each season differs, the distribution of group size should be the same (although overall number of sightings might be different). Given the difficulty in accurately estimating dolphin group size (especially for larger groups) the small difference in Autumn compared to the other seasons is likely not notable.
 
 <<botGroupSizeSeason, echo=false, results=hide>>=
 
@@ -544,7 +552,7 @@ dev.off()
 
 \begin{figure}
 \centering
-\includegraphics{botGroupSizeSeason}\\
+\includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{botGroupSizeSeason}\\
 \caption{\textit{Bottlenose dolphin group size recorded during each sighting to assess seasonal differences between Autumn (n = \Sexpr{nrow(bot_size[bot_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(bot_size[bot_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(bot_size[bot_size$Season == "Summer", ])}).}}
 \end{figure}
 
