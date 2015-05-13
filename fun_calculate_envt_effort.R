@@ -8,8 +8,7 @@ calculateEffort <- function(dat) {
   library(chron)
   
   #initialize environmental variables
-  envt.var <- matrix(0, ncol = 27)
-  colnames(envt.var) <- c(
+  names <- c(
     "Beaufort.Sea.State.1",
     "Beaufort.Sea.State.0",
     "Beaufort.Sea.State.1.5",
@@ -36,9 +35,13 @@ calculateEffort <- function(dat) {
     "Glare.25",
     "Glare.5",
     "Glare.20",
-    "Glare.1"
+    "Glare.1", 
+    paste(rep("Wind.speed", max(na.omit(dat[, 25])) - min(na.omit(dat[, 25])) + 1), 
+          rep(".", max(na.omit(dat[, 25])) - min(na.omit(dat[, 25])) + 1), 
+          c(seq(min(na.omit(dat[, 25])), max(na.omit(dat[, 25])))), sep = "")
   )
-  
+  envt.var <- matrix(0, ncol = length(names))
+  colnames(envt.var) <- names
   
   #sighting effort for bound data
   for (i in unique(dat$Date)) {
@@ -51,11 +54,11 @@ calculateEffort <- function(dat) {
         mins <- hours(time.stop - time.start)*60 + minutes(time.stop - time.start)
         
         #add minute differences to each environmental level
-        for (k in c(23, 26, 27, 29)) {
+        for (k in c(23, 25, 26, 27, 29)) {
           w <- which(colnames(envt.var) == as.name(paste(names(dat)[k], ".", dat[dat$Date == i, ][j, k], sep = "")))
           envt.var[1, w] <- envt.var[1, w] + mins
         }
-        if(mins > 30) print(c(i, mins))
+        if(mins > 30) print(c(as.character(unique(dat$Date)[unique(dat$Date) == i]), as.character(time.start), as.character(time.stop), mins))
       }
     }
   }
