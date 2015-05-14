@@ -1,6 +1,14 @@
 \documentclass{article}
 \usepackage{placeins}
 
+\setlength{\parskip}{0pt}
+\setlength{\parsep}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\topskip}{0pt}
+\setlength{\topmargin}{0pt}
+\setlength{\topsep}{0pt}
+\setlength{\partopsep}{0pt}
+
 \begin{document}
 \SweaveOpts{concordance=TRUE}
 \title{Preliminary seasonal analysis of Aerial Survey data}
@@ -559,12 +567,14 @@ dev.off()
 \end{figure}
 
 \FloatBarrier
+\section{Appendix}
 \subsection{Affect of Wind speed on sightings}
 
-Wind speed is expected to have a negative effect on sighting rates/hour. Wind speed in km/h is plotted against sighting rates/hr.\\
+Wind speed is expected to have a negative effect on sighting rates/hour. Wind speed in km/h is plotted against sighting rates/hr. There were very few hours flown at wind speeds >20km/h in the northbound direction (<1.5hrs), while winds were stronger during the southbound flights. This is likely because the southbound flights are later in the day and the wind has picked up after the northbound flight.\\
 
-This may be because wind is recorded only once per survey, according to the wind speed measured by BOM. Hence apparent sea state is a better measure of the affect of wind on sighting rates since every change in sea state is recorded.
+Wind speed does not show any obvious pattern with sighting rate for northbound flights. There may be a slight negative trend with baitfish in the southbound direction. Wind speed is recorded only once per survey, according to the wind speed measured by BOM. It is likely not a good representation of what is experienced during the transect because certain areas will be more sheltered than others. Hence apparent sea state is a better measure of the affect of wind on sighting rates since every change in sea state is recorded. This section has hence been put at the end of the report as an appendix rather than being included in the environmental condition section.
 
+\vspace{1.0cm}
 <<windSpeed, echo=false, results=hide>>=
 
 #north
@@ -593,13 +603,15 @@ rownames(wind_south) <- c("B", "BOT", "HH", "W")
 
 png("windSpeed.png")
 
-par(mfrow = c(1, 2))
+matplot(t(wind_north), type = "l", col = c("black", "red", "blue", "orange"), lty = 1, xlab = "Wind speed (km/h)", ylab = "Sightings/hr", main = "Flight direction = North")
+legend("topright", c("Baitfish", "Bottlenose dolphin", "Hammerhead shark", "White shark"), col = c("black", "red", "blue", "orange"), lwd = 2, bty = "n")
 
-matplot(t(wind_north), type = "l", col = c("black", "red", "blue", "orange"), lty = 1, xlab = "Wind speed (km/h)", ylab = "Sightings/hr")
-legend("topright", c("Baitfish", "Bottlenose dolphin", "Hammerhead shark", "White shark"), col = c("black", "red", "blue", "orange"), lwd = 2, bty = "n", main = "Flight direction = North")
+dev.off()
 
-matplot(t(wind_south), type = "l", col = c("black", "red", "blue", "orange"), lty = 1, xlab = "Wind speed (km/h)", ylab = "Sightings/hr")
-legend("topright", c("Baitfish", "Bottlenose dolphin", "Hammerhead shark", "White shark"), col = c("black", "red", "blue", "orange"), lwd = 2, bty = "n", main = "Flight direction = South")
+png("windSpeedSouth.png")
+
+matplot(t(wind_south), type = "l", col = c("black", "red", "blue", "orange"), lty = 1, xlab = "Wind speed (km/h)", ylab = "Sightings/hr", main = "Flight direction = South")
+legend("topright", c("Baitfish", "Bottlenose dolphin", "Hammerhead shark", "White shark"), col = c("black", "red", "blue", "orange"), lwd = 2, bty = "n")
 
 dev.off()
 
@@ -607,7 +619,8 @@ dev.off()
 
 \begin{figure}
   \centering
-  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeed}\\
+  \includegraphs[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeedSouth}\\
+  \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeed}\\
   \caption{\textit{Sightings/hour at each wind speed}}
 \end{figure}
 
