@@ -558,4 +558,57 @@ dev.off()
 \caption{\textit{Bottlenose dolphin group size recorded during each sighting to assess seasonal differences between Autumn (n = \Sexpr{nrow(bot_size[bot_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(bot_size[bot_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(bot_size[bot_size$Season == "Summer", ])}).}}
 \end{figure}
 
+\FloatBarrier
+\subsection{Affect of Wind speed on sightings}
+
+Wind speed is expected to have a negative effect on sighting rates/hour. Wind speed in km/h is plotted against sighting rates/hr.\\
+
+This may be because wind is recorded only once per survey, according to the wind speed measured by BOM. Hence apparent sea state is a better measure of the affect of wind on sighting rates since every change in sea state is recorded.
+
+<<windSpeed, echo=false, results=hide>>=
+
+#north
+wind_tab_north <- table(dat_season_north$Species, dat_season_north$Wind.speed)
+envt_effort_wind <- envt_effort[28:length(envt_effort)]
+wind_north <- matrix(0, ncol = 42, nrow = 4)
+for (i in 1:ncol(wind_tab_north)) {
+  
+  w <- as.numeric(colnames(wind_tab_north)[i]) + 1
+  wind_north[, w] <- wind_tab_north[, i]/envt_effort_wind[w]
+  
+}
+rownames(wind_north) <- c("B", "BOT", "HH", "W")
+
+#south
+wind_tab_south <- table(dat_season_south$Species, dat_season_south$Wind.speed)
+envt_effort_wind <- envt_effort_south[28:length(envt_effort)]
+wind_south <- matrix(0, ncol = 42, nrow = 4)
+for (i in 1:ncol(wind_tab_south)) {
+  
+  w <- as.numeric(colnames(wind_tab_south)[i]) - 1
+  wind_south[, w] <- wind_tab_south[, i]/envt_effort_wind[w]
+  
+}
+rownames(wind_south) <- c("B", "BOT", "HH", "W")
+
+png("windSpeed.png")
+
+par(mfrow = c(1, 2))
+
+matplot(t(wind_north), type = "l", col = c("black", "red", "blue", "orange"), lty = 1, xlab = "Wind speed (km/h)", ylab = "Sightings/hr")
+legend("topright", c("Baitfish", "Bottlenose dolphin", "Hammerhead shark", "White shark"), col = c("black", "red", "blue", "orange"), lwd = 2, bty = "n", main = "Flight direction = North")
+
+matplot(t(wind_south), type = "l", col = c("black", "red", "blue", "orange"), lty = 1, xlab = "Wind speed (km/h)", ylab = "Sightings/hr")
+legend("topright", c("Baitfish", "Bottlenose dolphin", "Hammerhead shark", "White shark"), col = c("black", "red", "blue", "orange"), lwd = 2, bty = "n", main = "Flight direction = South")
+
+dev.off()
+
+@
+
+\begin{figure}
+  \centering
+  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeed}\\
+  \caption{\textit{Sightings/hour at each wind speed}}
+\end{figure}
+
 \end{document}
