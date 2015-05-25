@@ -48,6 +48,8 @@ dat_season_south$Species <- factor(dat_season_south$Species)
 
 To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{round(effort_north$total/60, 1)}hours on-effort flown in the Northern direction and \Sexpr{round(effort_south$total/60, 1)}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times. Note: There was one extra survey day that was deleted from this analysis (26/1/2015) due to bad weather (sea state 4-5 during most of the survey). This survey was flown only because it was a public holiday. At the time of writing, there have been two seasons of surveys during both Autumn and Summer, however Spring has only been sampled once.\\
 
+In total, there were \Sexpr{dim(dat[dat$Type == "S", ])} observations (not including observations made by the second observer during the inter-observer surveys). Species seen include Baitfish, Bottlenose dolphins, Hammerhead sharks, Humpback whales, Turtles, Rays, Sunfish, Seals, Common Dolphins, White Sharks, Bull Sharks and other unidentified Sharks. A table containing the number of sightings of each species is available in the appendix. This report will focus on Bottlenose Dolphins, Baitfish, Hammerhead and White Sharks.
+
 There was a significant difference in sighting numbers/survey for bottlenose dolphins (more in Spring and Summer), hammerhead sharks (more in Summer) and white sharks (more in Summer), however not for baitfish. However, given the visual difference on the boxplots and the low p-value (p < 0.06) there is likely also a difference for baitfish (less in Summer) that we did not have the power to detect.\\
 
 The time period so far is not long enough to know whether seasonal changes are due to observer learning in the first season. There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Besides these observational differences, it is unclear whether there are baitfish or bottlenose dolphin annual differences.
@@ -103,7 +105,7 @@ dev.off()
   \caption{\textit{Number of sightings per survey during Autumn, Spring and Summer.}}
 \end{figure}
 
-The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also less bottlenose dolphin sightings/survey in Autumn than in Summer and Spring. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.
+The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also less bottlenose dolphin sightings/survey in Autumn than in Summer and Spring. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.\\*
 
 <<testSeasonalDifferences, echo=false>>=
 
@@ -129,6 +131,7 @@ colnames(p_tab) <- c("Spring", "Summer")
 
 @
 
+\textit{P-values for seasonal differences for Baitfish, Bottlenose dolphins, Hammerhead sharks and White sharks}\\
 \begin{tabular}{p{3cm} | l l}
     & \textbf{Spring} & \textbf{Summer} \\ \hline
   Baitfish & \Sexpr{round(p_tab[1, 1], 2)} & \Sexpr{round(p_tab[1, 2], 2)} \\
@@ -137,7 +140,7 @@ colnames(p_tab) <- c("Spring", "Summer")
   White shark & \Sexpr{round(p_tab[4, 1], 2)} & \Sexpr{round(p_tab[4, 2], 2)} \\
 \end{tabular}\\*
 
-To check whether sighting conditions varied greatly across seasons, and may have masked a difference in sightings, the proportion of hours flown during each season at different environmental levels is plotted below. There were slight differences in conditions seen between seasons. There was the clearest water in Summer, lowest cloud cover in Spring and the lowest Sea State in Spring. Assessing how environmental conditions is difficult because no season is overall "worse" in all aspects than the other seasons.
+To check whether sighting conditions varied greatly across seasons, and may have masked a difference in sightings, the proportion of hours flown during each season at different environmental levels is plotted below. There were slight differences in conditions seen between seasons. There was the clearest water in Summer, lowest cloud cover in Spring and the lowest Sea State in Spring. Assessing how environmental conditions is difficult because each season has aspects of the weather that were better and worse than other seasons.
 
 <<seasonEnvt, echo=false, results=hide>>=
 
@@ -173,11 +176,11 @@ dev.off()
 \FloatBarrier
 \section{Annual differences}
 
-While there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14 than any other season. This may indicate an annual difference between the two summers, or it may be an artifact of the survey schedule. As Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern as there is no measure of the learning curve of the observer.
+While there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14 than any other season. This may indicate a difference between the two summers, or it may be an artifact of the survey schedule. Since Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern as we have no measure of the learning curve of the observer.\\*
 
 \section{Environmental condition influence}
 
-Environmental conditions are likely to have a large influence on sighting rates. It is expected that there would be less sightings at higher sea states, in turbid water and high cloud cover. As sighting effort is highly skewed towards fine weather conditions, the number of sightings at each level cannot be directly compared. Instead the number of hours of effort at each sighting level are calculated and used to weight the number of sightings. The north and south-bound transects are analysed separately, because environmental conditions may affect sightings rates differently depending on whether the observer is looking onshore or offshore.
+Environmental conditions are likely to have a large influence on sighting rates. It is expected that there would be less sightings at higher sea states, in turbid water and high cloud cover. As sighting effort is highly skewed towards fine weather conditions, the number of sightings at each level cannot be directly compared. Instead the number of hours of effort at each sighting level are calculated and used to weight the number of sightings. The north and south-bound transects are analysed separately, because environmental conditions may affect sightings rates differently depending on whether the observer is looking onshore or offshore. \\*
 
 <<sightingsEnvironmentalLevelNorth, echo=false, results=hide>>=
 
@@ -228,7 +231,7 @@ Sea state had a similar effect on number of sightings in both directions. Baitfi
 
 Different patterns between sighting rate and turbidity level were seen in the North and South directions. In the northern direction, poor turbidity greatly decreased the number of baitfish and dolphin sightings/hr. However in the southern direction, baitfish and dolphin sightings were seen to increase with increasing turbidity. Increasing sightings in more murky water is not expected and there is not a clear reason why this would be the case.\\*
 
-These results indicate that north and southbound flights must be separately corrected for environmental conditions, as they have a different effect on sighting rate depending on flight direction.
+These results indicate that north and southbound flights must be separately corrected for environmental conditions, as they have a different effect on sighting rate depending on flight direction. An analysis of the affect of wind speed on sighting rates showed few patterns. It has been included in the appendix at the end of this report because recorded wind speed has been judged to likely be an innacurate measure of actual wind experienced during the survey. Sea state is a better in situ measure of wind speed.
 
 \begin{figure}
   \centering
@@ -496,25 +499,6 @@ dev.off()
   \caption{\textit{Swim direction of bottlenose dolphin sightings (S = South, N = North, C = Circling as a proportion of total sightings)}}
 \end{figure}
 
-
-\FloatBarrier
-\subsection{Mean dolphin group size}
-
-Bottlenose dolphin group size is estimated at the time of the sighting. A histogram of group sizes shows exponentially decreasing group size, with most containing <10 individuals.
-
-<<groupSize, echo=false, results=hide>>=
-png("groupSize.png")
-par(mfrow = c(1, 1))
-hist(dat$Number[dat$Species == "BOT"], main = "Bottlenose dolphin group size", xlab = "Group size", col = "lightgrey")
-dev.off()
-@
-
-\begin{figure}
-  \centering
-  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{groupSize}\\
-  \caption{\textit{Bottlenose dolphin group size for north and southbound flights}}
-\end{figure}
-
 \FloatBarrier
 \subsection{Baitfish and dolphin group size}
 
@@ -544,6 +528,8 @@ dev.off()
   \caption{\textit{Proportion of fish schools by size during Autumn (n = \Sexpr{nrow(fish_size[fish_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(fish_size[fish_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(fish_size[fish_size$Season == "Summer", ])})}}
 \end{figure}
 
+\FloatBarrier
+
 Similar to baitfish, bottlenose dolphin group size may vary across seasons, with larger groups seen during some seasons than others. Since the group size is not categorical like with Baitfish, the group sizes seen during each each season are plotted using boxplots.\\*
 
 Group sizes are very similar for Spring and Summer but may be slightly lower during Autumn. Even if the number of on effort hours during each season differs, the distribution of group size should be the same (although overall number of sightings might be different). Given the difficulty in accurately estimating dolphin group size (especially for larger groups) the small difference in Autumn compared to the other seasons is likely not notable.
@@ -571,8 +557,6 @@ dev.off()
 \subsection{Affect of Wind speed on sightings}
 
 Wind speed is expected to have a negative effect on sighting rates/hour. Wind speed in km/h is plotted against sighting rates/hr. There were very few hours flown at wind speeds >20km/h in the northbound direction (<1.5hrs), while winds were stronger during the southbound flights. This is likely because the southbound flights are later in the day and the wind has picked up after the northbound flight.\\
-
-Wind speed does not show any obvious pattern with sighting rate for northbound flights. There may be a slight negative trend with baitfish in the southbound direction. Wind speed is recorded only once per survey, according to the wind speed measured by BOM. It is likely not a good representation of what is experienced during the transect because certain areas will be more sheltered than others. Hence apparent sea state is a better measure of the affect of wind on sighting rates since every change in sea state is recorded. This section has hence been put at the end of the report as an appendix rather than being included in the environmental condition section.
 
 \vspace{1.0cm}
 <<windSpeed, echo=false, results=hide>>=
@@ -617,11 +601,40 @@ dev.off()
 
 @
 
+Wind speed does not show any obvious pattern with sighting rate for northbound flights. There may be a slight negative trend with baitfish in the southbound direction. Wind speed is recorded only once per survey, according to the wind speed measured by BOM. It is likely not a good representation of what is experienced during the transect because certain areas will be more sheltered than others. Hence apparent sea state is a better measure of the affect of wind on sighting rates since every change in sea state is recorded. This section has hence been put at the end of the report as an appendix rather than being included in the environmental condition section.
+
 \begin{figure}
   \centering
-  \includegraphs[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeedSouth}\\
-  \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeed}\\
+  \includegraphics[height = 6cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeed}\\
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[height = 6cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeedSouth}\\
   \caption{\textit{Sightings/hour at each wind speed}}
 \end{figure}
+
+\FloatBarrier
+\subsection{Total sightings of each species}
+
+
+\begin{tabular}{p{5cm} | l l l}
+    & \textbf{Autumn (n = \Sexpr{sum(dat$Season == "Autumn" & dat$Type == "SS")})} & \textbf{Spring (n = \Sexpr{dat$Season == "Spring" & dat$Type == "SS"})} & \textbf{Summer (n = \Sexpr{sum(dat$Season == "Summer" & dat$Type == "SS")})} & \\ \hline
+    Baitfish & \Sexpr{sum(dat$Species == "B" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Summer")}\\
+    Bottlenose dolphin & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Summer")}\\
+    Bull Shark & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Summer")}\\
+    Common Dolphin & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Summer")}\\
+    Large single Fish & \Sexpr{sum(dat$Species == "F" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "F" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "F" & dat$Season == "Summer")}\\
+    Sunfish & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Summer")}\\
+    Humpback Whale & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Summer")}\\
+    Hammerhead Shark & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Summer")}\\
+    Seal & \Sexpr{sum(dat$Species == "P" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "P" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "P" & dat$Season == "Summer")}\\
+    Ray & \Sexpr{sum(dat$Species == "R" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "R" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "R" & dat$Season == "Summer")}\\
+    Unidentified Shark & \Sexpr{sum(dat$Species == "S" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "S" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "S" & dat$Season == "Summer")}\\
+    Turtle & \Sexpr{sum(dat$Species == "T" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Summer")}\\
+    White Shark & \Sexpr{sum(dat$Species == "W" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Summer")}\\
+\end{tabular}\\*
+
+
 
 \end{document}
