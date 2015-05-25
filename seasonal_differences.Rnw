@@ -615,24 +615,27 @@ Wind speed does not show any obvious pattern with sighting rate for northbound f
 \end{figure}
 
 \FloatBarrier
-\subsection{Total sightings of each species}
+\subsection{Total sightings of each species}\\*
 
+The table below gives the total nubmer of sightings of each species. North and southbound flights are pooled and observations by the second observer during inter-observer surveys are not included. These are the raw sighting data and have not been weighted by the number of flights or hours flown during each season.\\*
 
-\begin{tabular}{p{5cm} | l l l}
-    & \textbf{Autumn (n = \Sexpr{sum(dat$Season == "Autumn" & dat$Type == "SS")})} & \textbf{Spring (n = \Sexpr{dat$Season == "Spring" & dat$Type == "SS"})} & \textbf{Summer (n = \Sexpr{sum(dat$Season == "Summer" & dat$Type == "SS")})} & \\ \hline
-    Baitfish & \Sexpr{sum(dat$Species == "B" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Summer")}\\
-    Bottlenose dolphin & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Summer")}\\
-    Bull Shark & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Summer")}\\
-    Common Dolphin & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Summer")}\\
-    Large single Fish & \Sexpr{sum(dat$Species == "F" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "F" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "F" & dat$Season == "Summer")}\\
-    Sunfish & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Summer")}\\
-    Humpback Whale & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Summer")}\\
-    Hammerhead Shark & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Summer")}\\
-    Seal & \Sexpr{sum(dat$Species == "P" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "P" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "P" & dat$Season == "Summer")}\\
-    Ray & \Sexpr{sum(dat$Species == "R" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "R" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "R" & dat$Season == "Summer")}\\
-    Unidentified Shark & \Sexpr{sum(dat$Species == "S" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "S" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "S" & dat$Season == "Summer")}\\
-    Turtle & \Sexpr{sum(dat$Species == "T" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Summer")}\\
-    White Shark & \Sexpr{sum(dat$Species == "W" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Summer")}\\
+\textit{Total number of sightings of each species during each season (n = total number of transects)}\\*
+\begin{tabular}{p{5cm} | l l l l}
+    & \textbf{\shortstack{Autumn \\ (n = \Sexpr{sum(dat$Season == "Autumn" & dat$Type == "SS")})}} & \textbf{\shortstack{Spring \\ (n = \Sexpr{sum(dat$Season == "Spring" & dat$Type == "SS")})}} & \textbf{\shortstack{Summer \\ (n = \Sexpr{sum(dat$Season == "Summer" & dat$Type == "SS")})}} & \textbf{Total} \\ \hline \\
+    Baitfish & \Sexpr{sum(dat$Species == "B" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "B")}\\
+    Bottlenose dolphin & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "BOT" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "BOT")} \\
+    Bull Shark & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "BS" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "BS")} \\
+    Common Dolphin & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "COM" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "COM")} \\
+    Large single Fish & \Sexpr{sum(dat$Species == "F" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "F" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "F" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "F")} \\
+    Sunfish & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "SF" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "SF")} \\
+    Humpback Whale & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "HB" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "HB")}\\
+    Hammerhead Shark & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "HH" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "HH")}\\
+    Seal & \Sexpr{sum(dat$Species == "P" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "P" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "P" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "P")}\\
+    Ray & \Sexpr{sum(dat$Species == "R" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "R" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "R" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "R")}\\
+    Unidentified Shark & \Sexpr{sum(dat$Species == "S" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "S" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "S" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "S")}\\
+    Turtle & \Sexpr{sum(dat$Species == "T" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "T")}\\
+    White Shark & \Sexpr{sum(dat$Species == "W" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "W")}\\ \\
+    \textbf{Total} & \Sexpr{sum(dat$Season == "Autumn" & dat$Type == "S")} & \Sexpr{sum(dat$Season == "Spring" & dat$Type == "S")} & \Sexpr{sum(dat$Season == "Summer" & dat$Type == "S")} & \textbf{\Sexpr{sum(dat$Type == "S")}}
 \end{tabular}\\*
 
 
