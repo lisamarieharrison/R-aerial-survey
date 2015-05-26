@@ -319,9 +319,9 @@ dev.off()
 @
 
 \FloatBarrier
-\begin{figure}
+\begin{figure}[h]
   \centering
-  \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{minDistToFish}\\
+  \includegraphics[height = 7cm, width = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{minDistToFish}\\
   \caption{\textit{Distance to closest baitfish school seen on the same day and flight direction as the sighting}}
 \end{figure}
 \FloatBarrier
@@ -338,15 +338,15 @@ closest_size <- closest_size[closest_size %in% c("S", "M", "L")]
 closest_size <- factor(closest_size)
 
 png("closestFishSize.png")
-plot(closest_size, main = "Size of closest fish school to bottlenose dolphin sighting (S = Small, M = Medium, L = Large", ylab = "Frequency")
+plot(closest_size, ylab = "Frequency")
 dev.off()
 @
 
 \FloatBarrier
-\begin{figure}
+\begin{figure}[h]
   \centering
-  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{closestFishSize}\\
-  \caption{\textit{Size of the closest baitfish school to a dolphin sighting}}
+  \includegraphics[height = 7cm, width = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{closestFishSize}\\
+  \caption{\textit{Size of the closest baitfish school to a dolphin sighting. S = Small, M = Medium, L = Large}}
 \end{figure}
 \FloatBarrier
 
@@ -369,7 +369,7 @@ dev.off()
 @
 
 \FloatBarrier
-\begin{figure}
+\begin{figure}[h]
   \centering
   \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{speciesLatitude}\\
   \caption{\textit{Number of sightings at each latitude for Baitfish, Bottlenose dolphins, Hammerhead sharks and White sharks.}}
@@ -529,7 +529,7 @@ dev.off()
 @
 
 \FloatBarrier
-\begin{figure}
+\begin{figure}[h]
   \centering
   \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{fishSchooSizeSeason}\\
   \caption{\textit{Proportion of fish schools by size during Autumn (n = \Sexpr{nrow(fish_size[fish_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(fish_size[fish_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(fish_size[fish_size$Season == "Summer", ])})}}
@@ -554,9 +554,9 @@ dev.off()
 @
 
 \FloatBarrier
-\begin{figure}
+\begin{figure}[h]
 \centering
-\includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{botGroupSizeSeason}\\
+\includegraphics[height = 8cm, width = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{botGroupSizeSeason}\\
 \caption{\textit{Bottlenose dolphin group size recorded during each sighting to assess seasonal differences between Autumn (n = \Sexpr{nrow(bot_size[bot_size$Season == "Autumn", ])}), Spring (n = \Sexpr{nrow(bot_size[bot_size$Season == "Spring", ])}) and Summer (n = \Sexpr{nrow(bot_size[bot_size$Season == "Summer", ])}).}}
 \end{figure}
 
@@ -613,12 +613,12 @@ dev.off()
 Wind speed does not show any obvious pattern with sighting rate for northbound flights. There may be a slight negative trend with baitfish in the southbound direction. Wind speed is recorded only once per survey, according to the wind speed measured by BOM. It is likely not a good representation of what is experienced during the transect because certain areas will be more sheltered than others. Hence apparent sea state is a better measure of the affect of wind on sighting rates since every change in sea state is recorded. This section has hence been put at the end of the report as an appendix rather than being included in the environmental condition section.
 
 \FloatBarrier
-\begin{figure}
+\begin{figure}[h]
   \centering
   \includegraphics[height = 6cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeed}\\
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h]
   \centering
   \includegraphics[height = 6cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeedSouth}\\
   \caption{\textit{Sightings/hour at each wind speed}}
