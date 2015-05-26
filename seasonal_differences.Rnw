@@ -336,9 +336,19 @@ min_dist_to_fish <- apply(fish_5k, 1, which.min)
 closest_size <- dat$Length.Size[dat$Species == "B"][unlist(min_dist_to_fish)]
 closest_size <- closest_size[closest_size %in% c("S", "M", "L")]
 closest_size <- factor(closest_size)
-plot(closest_size, main = "Size of closest fish school to bottlenose dolphin sighting (S = Small, M = Medium, L = Large", ylab = "Frequency")
 
+png("closestFishSize.png")
+plot(closest_size, main = "Size of closest fish school to bottlenose dolphin sighting (S = Small, M = Medium, L = Large", ylab = "Frequency")
+dev.off()
 @
+
+\FloatBarrier
+\begin{figure}
+  \centering
+  \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{closestFishSize}\\
+  \caption{\textit{Size of the closest baitfish school to a dolphin sighting}}
+\end{figure}
+\FloatBarrier
 
 \section{Clustering of sightings along the transect}
 
