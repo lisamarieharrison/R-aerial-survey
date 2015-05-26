@@ -96,13 +96,13 @@ dev.off()
 @
 
 There are small visible seasonal differences for all species seen in the boxplots below, which show the number of sightings during each survey. Hammerhead and white sharks were seen more in Summer than the other seasons, while baitfish and dolphins were seen more in Spring. For most animals there is a very large variation in sighting rates within seasons.
-\nolinebreak
+
 \nopagebreak
 \FloatBarrier
 
-\begin{figure}
+\begin{figure}[hb]
   \centering
-  \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{speciesHist}\\
+  \includegraphics[height = 10cm, trim = .5cm .5cm .5cm .5cm, clip]{speciesHist}\\
   \caption{\textit{Number of sightings per survey during Autumn, Spring and Summer.}}
 \end{figure}\\
 
@@ -170,15 +170,16 @@ dev.off()
 
 @
 
+\FloatBarrier
 \begin{figure}
   \centering
   \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{seasonEnvt}\\
   \caption{\textit{Proportion of total survey time flown at each level of Sea State, Turbidity and Cloud Cover during Autumn, Spring and Summer.}}
 \end{figure}
+\FloatBarrier
 
 There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Jellyfish are an important food source for Sunfish so it is logical that the Sunfish followed the jellyfish into the survey area. Besides these observational differences, it is unclear whether there are annual differences between the commonly seen species.
 
-\FloatBarrier
 \section{Annual differences}
 
 While there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14 than any other season. This may indicate a difference between the two summers, or it may be an artifact of the survey schedule. Since Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern since we have no measure of the learning curve of the observer.\\
@@ -236,9 +237,12 @@ Sea state had a similar effect on number of sightings in both directions. Baitfi
 
 Different patterns between sighting rate and turbidity level were seen in the North and South directions. In the northern direction, poor turbidity greatly decreased the number of baitfish and dolphin sightings/hr. However in the southern direction, baitfish and dolphin sightings were seen to increase with increasing turbidity. Increasing sightings in more murky water is not expected and there is not a clear reason why this would be the case.\\
 
-These results indicate that north and southbound flights must be separately corrected for environmental conditions, as they have a different effect on sighting rate depending on flight direction. An analysis of the affect of wind speed on sighting rates showed few patterns. It has been included in the appendix at the end of this report because recorded wind speed has been judged to likely be an innacurate measure of actual wind experienced during the survey. Sea state is a better in situ measure of wind speed.
+These results indicate that north and southbound flights must be separately corrected for environmental conditions, as they have a different effect on sighting rate depending on flight direction. An analysis of the affect of wind speed on sighting rates showed few patterns. It has been included in the appendix at the end of this report because recorded wind speed has been judged to likely be an innacurate measure of actual wind experienced during the survey. Sea state is a better in situ measure of wind speed. There was no apparent relationship between tide height and number of sightings that day for any species.
 
-\begin{figure}
+\nolinebreak
+\nopagebreak
+\FloatBarrier
+\begin{figure}[hb]
   \centering
   \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{sightingsEnvironmentalLevelNorth.png}\\
   \caption{\textit{Sightings/hr in the Northbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White Shark; Turbidity 1 = Excellent, 2 = Good, 3 = Poor}}
@@ -249,35 +253,8 @@ These results indicate that north and southbound flights must be separately corr
   \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{sightingsEnvironmentalLevelSouth.png}\\
   \caption{\textit{Sightings/hr in the Southbound direction. B = Baitfish, BOT = Bottlenose dolphin, HH = Hammerhead Shark, W = White shark; Turbidity 1 = Excellent, 2 = Good, 3 = Poor}}
 \end{figure}
-
-There is no apparent relationship between tide height and number of sightings that day for any species.
-
-<<tide, echo=false, results=hide>>=
-
-tide_tab <- table(dat$Species, dat$Tide)
-species <- which(rownames(tide_tab) %in% c("B", "BOT", "HH", "W"))
-date_tab <- table(dat$Date, dat$Tide)
-date_tab[date_tab > 0] <- 1
-date_weight <- colSums(date_tab)
-
-png("tide.png")
-
-par(mfrow = c(2, 2))
-
-plot(tide_tab[species[1], ]/date_weight, xlab = "tide height (m)", main = "Baitfish", pch = 19, ylab = "")
-plot(tide_tab[species[2], ]/date_weight, xlab = "tide height (m)", main = "Bottlenose Dolphin", pch = 19, ylab = "")
-plot(tide_tab[species[3], ]/date_weight, xlab = "tide height (m)", main = "Hammerhead Shark", pch = 19, ylab = "")
-plot(tide_tab[species[4], ]/date_weight, xlab = "tide height (m)", main = "White Shark", pch = 19, ylab = "")
-dev.off()
-@
-
-\begin{figure}
-  \centering
-  \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{tide}\\
-  \caption{\textit{Number of sightings at each tide height for Baitfish, Bottlenose Dolphins, Hammerhead Sharks and White Sharks}}
-\end{figure}
-
 \FloatBarrier
+
 \section{Relationship of shark and dolphin sightings to baitfish}\\
 
 Dolphin and sharks may be seen near baitfish schools since they are an important food source. As the transect width (300m) is negligable compared to the transect length (~250km), only the latitudinal distance between sightings is calculated. The distance is calculated using the Haversine function which accounts for the curvature of the earth. The distance to the closest fish school seen during the same survey as the dolphin or shark sighting was calculated, and boxplots are shown below. On some days when very few sightings were seen, there can be over 50km between the dolphin or shark and the closest fish school seen.
@@ -341,11 +318,13 @@ boxplot(as.numeric(bot_white[[1]][, 2]) ~ bot_white[[1]][, 1], ylab = "distance 
 dev.off()
 @
 
+\FloatBarrier
 \begin{figure}
   \centering
   \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{minDistToFish}\\
   \caption{\textit{Distance to closest baitfish school seen on the same day and flight direction as the sighting}}
 \end{figure}
+\FloatBarrier
 
 The size of the closest fish school might be important. Given the few number of white shark sightings, only the closest fish school size (Small, Medium or Large) to bottlenose dolphins is shown below. Sightings when the closest fish sighting is >5km away are not shown. Most closest fish schools are Small, however as most fish schools seen overall are also Small this does not indicate a preference for small fish schools.
 
@@ -361,7 +340,6 @@ plot(closest_size, main = "Size of closest fish school to bottlenose dolphin sig
 
 @
 
-\FloatBarrier
 \section{Clustering of sightings along the transect}
 
 Animals may be clustered along the transect rather than distributed randomly. This clustering may be due to preferences in habitat, prey density or geographic boundaries. The plots below show the number of sightings at each latitude along the transect. Some species are very obviously clustered, such as White sharks, which were almost all seen between the Swansea headland and Redhead beach, and were never seen further south of The Entrance. Baitfish and bottlenose dolphins were seen over the entire survey area however were more populus in some areas than others. Hammerhead sharks were also seen over the entire transect length, but were far more commom in the northern extents of the survey. It is expected that the tests for clustering will reveal that the animals are not distributed randomly along the transect.
@@ -380,11 +358,13 @@ plot(lat_tab[species[4], ], main = "White shark", xlab = "latitude", ylab = "tot
 dev.off()
 @
 
+\FloatBarrier
 \begin{figure}
   \centering
   \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{speciesLatitude}\\
   \caption{\textit{Number of sightings at each latitude for Baitfish, Bottlenose dolphins, Hammerhead sharks and White sharks.}}
 \end{figure}
+\FloatBarrier
 
 If sightings are distributed randomly, they should follow a homogeneous Poisson distribution. Two different methods have been used to test this, the Hopkin's statistic and the Kolmogorov-Smirnoff test. The Hopkin's statistic is a ratio of the distance between randomly chosen locations along the transect and their nearest sighting and the distance of randomly chosen sightings from their closest sighting. If clustering is present, the numerator will be larger than the denominator. In general, a Hopkin's test statistic of >0.5 indicates clustering.\\
 
@@ -508,6 +488,7 @@ dev.off()
 
 @
 
+\FloatBarrier
 \begin{figure}
   \centering
   \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{swimDirection}\\
@@ -537,6 +518,7 @@ dev.off()
 
 @
 
+\FloatBarrier
 \begin{figure}
   \centering
   \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{fishSchooSizeSeason}\\
@@ -561,6 +543,7 @@ dev.off()
 
 @
 
+\FloatBarrier
 \begin{figure}
 \centering
 \includegraphics[height = 7cm, trim = .5cm .5cm .5cm .5cm, clip]{botGroupSizeSeason}\\
@@ -619,6 +602,7 @@ dev.off()
 
 Wind speed does not show any obvious pattern with sighting rate for northbound flights. There may be a slight negative trend with baitfish in the southbound direction. Wind speed is recorded only once per survey, according to the wind speed measured by BOM. It is likely not a good representation of what is experienced during the transect because certain areas will be more sheltered than others. Hence apparent sea state is a better measure of the affect of wind on sighting rates since every change in sea state is recorded. This section has hence been put at the end of the report as an appendix rather than being included in the environmental condition section.
 
+\FloatBarrier
 \begin{figure}
   \centering
   \includegraphics[height = 6cm, trim = .5cm .5cm .5cm .5cm, clip]{windSpeed}\\
@@ -633,7 +617,7 @@ Wind speed does not show any obvious pattern with sighting rate for northbound f
 \FloatBarrier
 \subsection{Total sightings of each species}\\
 
-The table below gives the total nubmer of sightings of each species. North and southbound flights are pooled and observations by the second observer during inter-observer surveys are not included because not all survey days had an inter-observer survey. These are the raw sighting data and have not been weighted by the number of flights or hours flown during each season.\\
+The table below gives the total number of sightings of each species. North and southbound flights are pooled and observations by the second observer during inter-observer surveys are not included because not all survey days had an inter-observer survey. These are the raw sighting data and have not been weighted by the number of flights or hours flown during each season.\\
 
 \textit{Total number of sightings of each species during each season (n = total number of transects)}\\
 \begin{tabular}{p{5cm} | l l l l}
