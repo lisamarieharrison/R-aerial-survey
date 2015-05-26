@@ -1,13 +1,11 @@
 \documentclass{article}
 \usepackage{placeins}
 
-\setlength{\parskip}{0pt}
-\setlength{\parsep}{0pt}
-\setlength{\headsep}{0pt}
-\setlength{\topskip}{0pt}
-\setlength{\topmargin}{0pt}
-\setlength{\topsep}{0pt}
-\setlength{\partopsep}{0pt}
+\usepackage[
+top    = 2.54cm,
+bottom = 2.54cm,
+left   = 2.54cm,
+right  = 2.54cm]{geometry}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
@@ -48,15 +46,13 @@ dat_season_south$Species <- factor(dat_season_south$Species)
 
 To date there have been a total of \Sexpr{length(unique(dat$Date))} survey days, each with a north and south-bound survey (except for one day where the northbound flight was flown at 60kts rather than the usual 100kts as a trial and has hence been removed from this analysis). There were a total of \Sexpr{round(effort_north$total/60, 1)}hours on-effort flown in the Northern direction and \Sexpr{round(effort_south$total/60, 1)}hours in the Southern direction. Off-effort times such as harbour crossings and circles for photographs are not included in these times. Note: There was one extra survey day that was deleted from this analysis (26/1/2015) due to bad weather (sea state 4-5 during most of the survey). This survey was flown only because it was a public holiday. At the time of writing, there have been two seasons of surveys during both Autumn and Summer, however Spring has only been sampled once.\\
 
-In total, there were \Sexpr{dim(dat[dat$Type == "S", ])} observations (not including observations made by the second observer during the inter-observer surveys). Species seen include Baitfish, Bottlenose dolphins, Hammerhead sharks, Humpback whales, Turtles, Rays, Sunfish, Seals, Common Dolphins, White Sharks, Bull Sharks and other unidentified Sharks. A table containing the number of sightings of each species is available in the appendix. This report will focus on Bottlenose Dolphins, Baitfish, Hammerhead and White Sharks.
+In total, there were \Sexpr{dim(dat[dat$Type == "S", ])} observations (not including observations made by the second observer during the inter-observer surveys). Species seen include Baitfish, Bottlenose dolphins, Hammerhead sharks, Humpback whales, Turtles, Rays, Sunfish, Seals, Common Dolphins, White Sharks, Bull Sharks and other unidentified Sharks. A table containing the number of sightings of each species is available in the appendix. This report will focus on Bottlenose Dolphins, Baitfish, Hammerhead and White Sharks.\\
 
-There was a significant difference in sighting numbers/survey for bottlenose dolphins (more in Spring and Summer), hammerhead sharks (more in Summer) and white sharks (more in Summer), however not for baitfish. However, given the visual difference on the boxplots and the low p-value (p < 0.06) there is likely also a difference for baitfish (less in Summer) that we did not have the power to detect.\\
+There was a significant difference in sighting numbers/survey for bottlenose dolphins (more in Spring and Summer), hammerhead sharks (more in Summer) and white sharks (more in Summer), however not for baitfish. However, given the visual difference on the boxplots and the low p-value there is likely also a difference for baitfish (less in Summer) that we did not have the power to detect. The time period so far is not long enough to know whether annual differences in some seasons are due to observer learning.
 
-The time period so far is not long enough to know whether seasonal changes are due to observer learning in the first season. There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Besides these observational differences, it is unclear whether there are baitfish or bottlenose dolphin annual differences.
+\pagebreak
 
 \section{Seasonal differences}
-
-There are visible seasonal differences for all species seen in the boxplots below, which show the number of sightings on each survey. Hammerhead and white sharks were seen more in Summer than the other seasons, while baitfish and dolphins were seen more in Spring. It can be seen that for most animals, there was a very large variation in sighting rates within seasons.
 
 <<speciesHist, echo=false, results=hide>>=
 
@@ -99,13 +95,20 @@ dev.off()
 
 @
 
+There are small visible seasonal differences for all species seen in the boxplots below, which show the number of sightings during each survey. Hammerhead and white sharks were seen more in Summer than the other seasons, while baitfish and dolphins were seen more in Spring. For most animals there is a very large variation in sighting rates within seasons.
+\nolinebreak
+\nopagebreak
+\FloatBarrier
+
 \begin{figure}
   \centering
-  \includegraphics{speciesHist}\\
+  \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{speciesHist}\\
   \caption{\textit{Number of sightings per survey during Autumn, Spring and Summer.}}
-\end{figure}
+\end{figure}\\
 
-The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also less bottlenose dolphin sightings/survey in Autumn than in Summer and Spring. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.\\*
+\FloatBarrier
+
+The significance of these differences was assessed separately for each species because the patterns across seasons are not condistent across species. The table below shows the p-values. There were significantly more hammerhead and white shark sightings in Summer compared to the other two seasons. There were also less bottlenose dolphin sightings/survey in Autumn than in Summer and Spring. White the differences in baitfish sightings were not significant, there may be a significant difference that might not be detectable due to insufficient power in sampling design or analysis.\\
 
 <<testSeasonalDifferences, echo=false>>=
 
@@ -138,7 +141,7 @@ colnames(p_tab) <- c("Spring", "Summer")
   Bottlenose dolphin & \Sexpr{round(p_tab[2, 1], 2)} & \Sexpr{round(p_tab[2, 2], 2)} \\
   Hammerhead shark & \Sexpr{round(p_tab[3, 1], 2)} & \Sexpr{round(p_tab[3, 2], 2)} \\
   White shark & \Sexpr{round(p_tab[4, 1], 2)} & \Sexpr{round(p_tab[4, 2], 2)} \\
-\end{tabular}\\*
+\end{tabular}\\ \\
 
 To check whether sighting conditions varied greatly across seasons, and may have masked a difference in sightings, the proportion of hours flown during each season at different environmental levels is plotted below. There were slight differences in conditions seen between seasons. There was the clearest water in Summer, lowest cloud cover in Spring and the lowest Sea State in Spring. Assessing how environmental conditions is difficult because each season has aspects of the weather that were better and worse than other seasons.
 
@@ -169,18 +172,20 @@ dev.off()
 
 \begin{figure}
   \centering
-  \includegraphics{seasonEnvt}\\
+  \includegraphics[height = 8cm, trim = .5cm .5cm .5cm .5cm, clip]{seasonEnvt}\\
   \caption{\textit{Proportion of total survey time flown at each level of Sea State, Turbidity and Cloud Cover during Autumn, Spring and Summer.}}
 \end{figure}
+
+There were some obvious seasonal differences, such as a large number of white sharks in 2013/2014 Summer compared to 2014/2015 Summer. There were a large number of jellyfish in Summer 2014/2015 that had not been seen previously. This was accompanied by Sunfish sightings, a species which have not been seen in any other seasons. Jellyfish are an important food source for Sunfish so it is logical that the Sunfish followed the jellyfish into the survey area. Besides these observational differences, it is unclear whether there are annual differences between the commonly seen species.
 
 \FloatBarrier
 \section{Annual differences}
 
-While there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14 than any other season. This may indicate a difference between the two summers, or it may be an artifact of the survey schedule. Since Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern as we have no measure of the learning curve of the observer.\\*
+While there are more sightings during Summer 14/15 compared to Spring or Autumn, there are less sightings in Summer 13/14 than any other season. This may indicate a difference between the two summers, or it may be an artifact of the survey schedule. Since Summer 13/14 was the first season of flights for the primary observer, it is possible that there were a lower number of sightings during this season due to observer inexperience. This is very difficult to discern since we have no measure of the learning curve of the observer.\\
 
 \section{Environmental condition influence}
 
-Environmental conditions are likely to have a large influence on sighting rates. It is expected that there would be less sightings at higher sea states, in turbid water and high cloud cover. As sighting effort is highly skewed towards fine weather conditions, the number of sightings at each level cannot be directly compared. Instead the number of hours of effort at each sighting level are calculated and used to weight the number of sightings. The north and south-bound transects are analysed separately, because environmental conditions may affect sightings rates differently depending on whether the observer is looking onshore or offshore. \\*
+Environmental conditions are likely to have a large influence on sighting rates. It is expected that there would be less sightings at higher sea states, in turbid water and high cloud cover. As sighting effort is highly skewed towards fine weather conditions, the number of sightings at each level cannot be directly compared. Instead the number of hours of effort at each sighting level are calculated and used to weight the number of sightings. The north and south-bound transects are analysed separately, because environmental conditions may affect sightings rates differently depending on whether the observer is looking onshore or offshore. \\
 
 <<sightingsEnvironmentalLevelNorth, echo=false, results=hide>>=
 
@@ -227,9 +232,9 @@ dev.off()
 
 @
 
-Sea state had a similar effect on number of sightings in both directions. Baitfish showed a very definite pattern in decrease in sightings/hr as sea state increased. Bottlenose dolphin sightings/hr were similar at sea states 1 and 2, but halved when sea state increased to 3. Sea state did not have as much effect on hammerhead sharks as for dolphins and fish. There were so few white shark sightings that it is difficult to assess any relationship to environmental conditions. In general, sighting rates were lower when there was full cloud cover. However there is no obvious relationship between sighting rate and cloud cover measured out of 8. The plot for cloud cover is currently not shown because it is difficult to see due to the 8 levels.\\*
+Sea state had a similar effect on number of sightings in both directions. Baitfish showed a very definite pattern in decrease in sightings/hr as sea state increased. Bottlenose dolphin sightings/hr were similar at sea states 1 and 2, but halved when sea state increased to 3. Sea state did not have as much effect on hammerhead sharks as for dolphins and fish. There were so few white shark sightings that it is difficult to assess any relationship to environmental conditions. In general, sighting rates were lower when there was full cloud cover. However there is no obvious relationship between sighting rate and cloud cover measured out of 8. The plot for cloud cover is currently not shown because it is difficult to see due to the 8 levels.\\
 
-Different patterns between sighting rate and turbidity level were seen in the North and South directions. In the northern direction, poor turbidity greatly decreased the number of baitfish and dolphin sightings/hr. However in the southern direction, baitfish and dolphin sightings were seen to increase with increasing turbidity. Increasing sightings in more murky water is not expected and there is not a clear reason why this would be the case.\\*
+Different patterns between sighting rate and turbidity level were seen in the North and South directions. In the northern direction, poor turbidity greatly decreased the number of baitfish and dolphin sightings/hr. However in the southern direction, baitfish and dolphin sightings were seen to increase with increasing turbidity. Increasing sightings in more murky water is not expected and there is not a clear reason why this would be the case.\\
 
 These results indicate that north and southbound flights must be separately corrected for environmental conditions, as they have a different effect on sighting rate depending on flight direction. An analysis of the affect of wind speed on sighting rates showed few patterns. It has been included in the appendix at the end of this report because recorded wind speed has been judged to likely be an innacurate measure of actual wind experienced during the survey. Sea state is a better in situ measure of wind speed.
 
@@ -381,11 +386,11 @@ dev.off()
   \caption{\textit{Number of sightings at each latitude for Baitfish, Bottlenose dolphins, Hammerhead sharks and White sharks.}}
 \end{figure}
 
-If sightings are distributed randomly, they should follow a homogeneous Poisson distribution. Two different methods have been used to test this, the Hopkin's statistic and the Kolmogorov-Smirnoff test. The Hopkin's statistic is a ratio of the distance between randomly chosen locations along the transect and their nearest sighting and the distance of randomly chosen sightings from their closest sighting. If clustering is present, the numerator will be larger than the denominator. In general, a Hopkin's test statistic of >0.5 indicates clustering.\\*
+If sightings are distributed randomly, they should follow a homogeneous Poisson distribution. Two different methods have been used to test this, the Hopkin's statistic and the Kolmogorov-Smirnoff test. The Hopkin's statistic is a ratio of the distance between randomly chosen locations along the transect and their nearest sighting and the distance of randomly chosen sightings from their closest sighting. If clustering is present, the numerator will be larger than the denominator. In general, a Hopkin's test statistic of >0.5 indicates clustering.\\
 
-The Kolmogorov-Smirnoff test compares the event spacing (sighting rate) to the expected event spacing if the assumption of a homogeneous Poisson distribution holds. For the reference data set, the sighting locations are randomly chosen along the transect and the mean event spacing is used as the lambda to generate Poission random values. A p-value <0.05 indicates a significant difference in the distributions of the observed and reference data. North and southbound flights are compared separately for both tests. Data from all surveys are pooled to attain a large enough sample size to test for clustering.\\* 
+The Kolmogorov-Smirnoff test compares the event spacing (sighting rate) to the expected event spacing if the assumption of a homogeneous Poisson distribution holds. For the reference data set, the sighting locations are randomly chosen along the transect and the mean event spacing is used as the lambda to generate Poission random values. A p-value <0.05 indicates a significant difference in the distributions of the observed and reference data. North and southbound flights are compared separately for both tests. Data from all surveys are pooled to attain a large enough sample size to test for clustering.\\ 
 
-For all species in both directions, p<0.05 indicating that the sightings are not randomly distributed. The p-value for the shark species is far closer than the bottlenose dolphin or baitfish p-values, which at face value appears to indicate that these species are close to randomly distributed. However, as white sharks were virtually seen in one location along the transect they are highly clustered. It is likely that the test is unable to detect this because the event spacing between all sightings is small (as they are all in the same bay), which gives the illusion of a Poisson distribution. In cases such as this, the Hopkin's statistic is more powerful to detect clustering as it uses locations along the entire transect, not only distance between known sightings.\\*
+For all species in both directions, p < 0.05 indicating that the sightings are not randomly distributed. The p-value for the shark species is far closer than the bottlenose dolphin or baitfish p-values, which at face value appears to indicate that these species are close to randomly distributed. However, as white sharks were virtually seen in one location along the transect they are highly clustered. It is likely that the test is unable to detect this because the event spacing between all sightings is small (as they are all in the same bay), which gives the illusion of a Poisson distribution. In cases such as this, the Hopkin's statistic is more powerful to detect clustering as it uses locations along the entire transect, not only distance between known sightings.\\
 
 The observed distribution is a thinned version of the actual species distribution with the detection function acting as a thinning process. An imperfect detection rate is expected in marine surveys since animals can be underwater and hence invisible, so it is likely that the on track detection probability, g(0), is far from 1. This is not explored further in this document but will be investigated more thoroughly later when the distance analysis is carried out. 
 
@@ -434,15 +439,14 @@ calculateHopkins(species = "BOT", dat = dat, direction = "N")
 
 
 #kolmogorov-smirnoff to compare poisson
-calculateKolmogorovSmirnoff <- function(species, dat, direction) {
+calculateKolmogorovSmirnoff <- function(species, dat) {
  
   #tests if sighting rate is poisson using Kolmogorov-Smirnoff test
   #species = string containing species code
   #dat = full data set
-  #direction = string containing flight direction
   
   lat <- seq(min(na.omit(dat$Lat)), max(na.omit(dat$Lat)), length.out = 10000)
-  species_obs <- dat[dat$Species == species & !is.na(dat$Lat) & dat$Flight.Direction == direction, ]
+  species_obs <- dat[dat$Species == species & !is.na(dat$Lat), ]
   n <- nrow(species_obs)  
   chosen_point <- sample(lat, n, replace = FALSE)
   
@@ -463,9 +467,20 @@ calculateKolmogorovSmirnoff <- function(species, dat, direction) {
   
 }
 
-calculateKolmogorovSmirnoff("B", dat, "S")
-
+bait_ks <- calculateKolmogorovSmirnoff("B", dat)
+bot_ks <- calculateKolmogorovSmirnoff("BOT", dat)
+w_ks <- calculateKolmogorovSmirnoff("W", dat)
+hh_ks <- calculateKolmogorovSmirnoff("HH", dat)
 @
+
+\textit{Kolmogorov-Smirnoff statistics for each species and each flight direction}\\
+\begin{tabular}{p{5cm} | l l}
+    & \textbf{K-S p-value}  \\ \hline \\
+  Baitfish & \Sexpr{bait_ks} \\
+  Bottlenose dolphin & \Sexpr{bot_ks} \\
+  Hammerhead shark  & \Sexpr{hh_ks} \\
+  White shark  & \Sexpr{w_ks} \\
+\end{tabular}\\
 
 \FloatBarrier
 \section{Other small things}
@@ -502,7 +517,7 @@ dev.off()
 \FloatBarrier
 \subsection{Baitfish and dolphin group size}
 
-The total number of fish schools seen in each season was different, however the percentage of sightings that are Small, Medium or Large might be different in each season. To check this, a stacked barplot showing the proportion of baitfish schools that were Small, Medium or Large during each season are shown below. The size composition of the sightings is very close during Autumn, Spring and Summer, with no obvious seasonal differences. During all seasons, most fish schools were Small, followed by Medium and then Large. Note: South and northbound data are pooled in this plot.
+The total number of fish schools seen in each season was different, however the percentage of sightings that are Small, Medium or Large might be different in each season. To check this, a stacked barplot showing the proportion of baitfish schools that were Small, Medium or Large during each season are shown below. The size composition of the sightings is very close during Autumn, Spring and Summer, with no obvious seasonal differences. During all seasons, most fish schools were Small, followed by Medium and then Large. The south and northbound data are pooled in this plot.
 
 <<fishSchoolSizeSeason, echo=false, results=hide>>=
 fish_size <- dat[dat$Length.Size %in% c("S", "M", "L") & dat$Species == "B", ]
@@ -530,7 +545,7 @@ dev.off()
 
 \FloatBarrier
 
-Similar to baitfish, bottlenose dolphin group size may vary across seasons, with larger groups seen during some seasons than others. Since the group size is not categorical like with Baitfish, the group sizes seen during each each season are plotted using boxplots.\\*
+Similar to baitfish, bottlenose dolphin group size may vary across seasons, with larger groups seen during some seasons than others. Since the group size is not categorical like with Baitfish, the group sizes seen during each each season are plotted using boxplots.\\
 
 Group sizes are very similar for Spring and Summer but may be slightly lower during Autumn. Even if the number of on effort hours during each season differs, the distribution of group size should be the same (although overall number of sightings might be different). Given the difficulty in accurately estimating dolphin group size (especially for larger groups) the small difference in Autumn compared to the other seasons is likely not notable.
 
@@ -553,6 +568,7 @@ dev.off()
 \end{figure}
 
 \FloatBarrier
+\pagebreak
 \section{Appendix}
 \subsection{Affect of Wind speed on sightings}
 
@@ -615,11 +631,11 @@ Wind speed does not show any obvious pattern with sighting rate for northbound f
 \end{figure}
 
 \FloatBarrier
-\subsection{Total sightings of each species}\\*
+\subsection{Total sightings of each species}\\
 
-The table below gives the total nubmer of sightings of each species. North and southbound flights are pooled and observations by the second observer during inter-observer surveys are not included. These are the raw sighting data and have not been weighted by the number of flights or hours flown during each season.\\*
+The table below gives the total nubmer of sightings of each species. North and southbound flights are pooled and observations by the second observer during inter-observer surveys are not included because not all survey days had an inter-observer survey. These are the raw sighting data and have not been weighted by the number of flights or hours flown during each season.\\
 
-\textit{Total number of sightings of each species during each season (n = total number of transects)}\\*
+\textit{Total number of sightings of each species during each season (n = total number of transects)}\\
 \begin{tabular}{p{5cm} | l l l l}
     & \textbf{\shortstack{Autumn \\ (n = \Sexpr{sum(dat$Season == "Autumn" & dat$Type == "SS")})}} & \textbf{\shortstack{Spring \\ (n = \Sexpr{sum(dat$Season == "Spring" & dat$Type == "SS")})}} & \textbf{\shortstack{Summer \\ (n = \Sexpr{sum(dat$Season == "Summer" & dat$Type == "SS")})}} & \textbf{Total} \\ \hline \\
     Baitfish & \Sexpr{sum(dat$Species == "B" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "B" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "B")}\\
@@ -636,7 +652,7 @@ The table below gives the total nubmer of sightings of each species. North and s
     Turtle & \Sexpr{sum(dat$Species == "T" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "T" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "T")}\\
     White Shark & \Sexpr{sum(dat$Species == "W" & dat$Season == "Autumn")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Spring")} & \Sexpr{sum(dat$Species == "W" & dat$Season == "Summer")} & \Sexpr{sum(dat$Species == "W")}\\ \\
     \textbf{Total} & \Sexpr{sum(dat$Season == "Autumn" & dat$Type == "S")} & \Sexpr{sum(dat$Season == "Spring" & dat$Type == "S")} & \Sexpr{sum(dat$Season == "Summer" & dat$Type == "S")} & \textbf{\Sexpr{sum(dat$Type == "S")}}
-\end{tabular}\\*
+\end{tabular}\\
 
 
 
