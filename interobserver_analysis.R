@@ -102,7 +102,7 @@ title("Missed sightings by date")
 
 #detection functions - hazard rate chosen as best using AIC
 
-total_observations <- rbind(total_missed, lisa_missed, vic_missed)
+total_observations <- rbind(overlap, lisa_missed, vic_missed)
 total_observations$Species[total_observations$Species %in% c("BS", "W", "Wh")] <- "S"
 total_observations <- total_observations[total_observations$Species == "B", ]
 total_observations <- total_observations[total_observations$Dist..from.transect !=0 & !is.na(total_observations$Dist..from.transect), ]
@@ -113,7 +113,7 @@ total_observations <- data.frame(total_observations)
 colnames(total_observations) <- c("object", "observer", "detected", "distance")
 
 
-p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "unif", formula=~1), 
+p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "hr", formula=~1), 
                data = total_observations, meta.data = list(left = 50))
 summary(p_total)
 ddf.gof(p_total, main="Total observations goodness of fit")
@@ -121,14 +121,31 @@ plot(p_total)
 
 
 #double observer
-total_observations <- rbind(total_missed, lisa_missed, vic_missed)
-total_observations$Species[total_observations$Species %in% c("BS", "W", "Wh")] <- "S"
-total_observations <- total_observations[total_observations$Species == "B", ]
-total_observations <- total_observations[total_observations$Dist..from.transect !=0 & !is.na(total_observations$Dist..from.transect), ]
-total_observations <- total_observations$Dist..from.transect
-total_observations <- cbind(c(1:length(total_observations)), rep(1, length(total_observations)), 
-                            rep(1, length(total_observations)), total_observations)
 
+total_observations <- cbind(1:nrow(overlap), rep(1, nrow(overlap)), rep(1, nrow(overlap)), overlap$Dist..from.transect, overlap$Species)
+total_observations <- rbind(total_observations, total_observations)
+total_observations[(nrow(overlap) + 1):nrow(total_observations), 2] <- 2
+
+total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(lisa_missed)), rep(2, nrow(lisa_missed)), rep(1, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species))
+total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(lisa_missed)), rep(1, nrow(lisa_missed)), rep(0, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species))
+total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(vic_missed)), rep(1, nrow(vic_missed)), rep(1, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species))
+total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(vic_missed)), rep(2, nrow(vic_missed)), rep(0, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species))
+
+total_observations[, 1] <- c(rep(1:349, 2), rep(350:(350+nrow(lisa_missed) - 1), 2), rep((349 + 1 +nrow(lisa_missed)):(349 + nrow(lisa_missed) + nrow(vic_missed)), 2))
+
+total_observations <- data.frame(total_observations)
+colnames(total_observations) <- c("object", "observer", "detected", "distance", "species")
+
+total_observations <- total_observations[total_observations$species == 1, ]
+total_observations <- total_observations[total_observations$distance !=0 & !is.na(total_observations$distance), ]
+
+p_total <- ddf(method="io", mrmodel =~ glm(~distance), dsmodel =~ cds(key = "hr", formula=~1),
+               data = total_observations, meta.data = list(left = 50))
+
+
+summary(p_total)
+ddf.gof(p_total, main="Total observations goodness of fit")
+plot(p_total)
 
 
 #------------------------ EFFORT FOR SOUTH BOUND FLIGHTS ----------------------#
