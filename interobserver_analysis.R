@@ -1,6 +1,7 @@
 #inter-observer aerial survey preliminary analysis
 dat <- read.csv("C:/Users/Lisa/Documents/phd/aerial survey/R/data/interobserver_20151019.csv", header = T)
 library(knitr)
+library(mrds)
 
 dat <- dat[dat$Type == "S", ]
 dat <- dat[dat$Species != "", ]
@@ -95,6 +96,24 @@ points(table(total_missed$Observer, total_missed$Date)[2, ], col = "red", type =
 legend("topleft", c("Vic", "Lisa"), col = c("black", "red"), lwd = 2, bty = "n", cex = 0.8)
 axis(side = 1, at = 1:22, colnames(table(total_missed$Observer, total_missed$Date)))
 title("Missed sightings by date")
+
+
+#detection functions
+total_observations <- rbind(total_missed, lisa_missed, vic_missed)
+total_observations <- total_observations[total_observations$Species == "B", ]
+total_observations <- total_observations[total_observations$Dist..from.transect !=0 & !is.na(total_observations$Dist..from.transect), ]
+total_observations <- total_observations$Dist..from.transect
+total_observations <- cbind(c(1:length(total_observations)), rep(1, length(total_observations)), 
+                            rep(1, length(total_observations)), total_observations)
+total_observations <- data.frame(total_observations)
+colnames(total_observations) <- c("object", "observer", "detected", "distance")
+
+
+p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "hn", formula=~1), 
+               data = total_observations, meta.data = list(left = 50))
+summary(p_total)
+ddf.gof(p_total, main="Total observations goodness of fit")
+plot(p_total)
 
 
 #------------------------ EFFORT FOR SOUTH BOUND FLIGHTS ----------------------#
