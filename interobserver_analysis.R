@@ -121,30 +121,58 @@ plot(p_total)
 
 distanceData <- function(species, overlap, lisa_missed, vic_missed) {
   
+  #sets up data frame for distance sampling analysis
   #species code:  1 = baitfish, 2 = bottlenose dolphin
   
-  dataframe <- cbind(1:nrow(overlap), rep(1, nrow(overlap)), rep(1, nrow(overlap)), overlap$Dist..from.transect, overlap$Species, overlap$Trial)
+  dataframe <- cbind(1:nrow(overlap), rep(1, nrow(overlap)), rep(1, nrow(overlap)), overlap$Dist..from.transect, overlap$Species, overlap$Trial, overlap$Number)
   dataframe <- rbind(dataframe, dataframe)
   dataframe[(nrow(overlap) + 1):nrow(dataframe), 2] <- 2
   
-  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(lisa_missed)), rep(2, nrow(lisa_missed)), rep(1, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species, lisa_missed$Trial))
-  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(lisa_missed)), rep(1, nrow(lisa_missed)), rep(0, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species, lisa_missed$Trial))
-  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(vic_missed)), rep(1, nrow(vic_missed)), rep(1, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species, vic_missed$Trial))
-  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(vic_missed)), rep(2, nrow(vic_missed)), rep(0, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species, vic_missed$Trial))
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(lisa_missed)), rep(2, nrow(lisa_missed)), rep(1, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species, lisa_missed$Trial, lisa_missed$Number))
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(lisa_missed)), rep(1, nrow(lisa_missed)), rep(0, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species, lisa_missed$Trial, lisa_missed$Number))
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(vic_missed)), rep(1, nrow(vic_missed)), rep(1, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species, vic_missed$Trial, vic_missed$Number))
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(vic_missed)), rep(2, nrow(vic_missed)), rep(0, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species, vic_missed$Trial, vic_missed$Number))
   
   dataframe[, 1] <- c(rep(1:349, 2), rep(350:(350+nrow(lisa_missed) - 1), 2), rep((349 + 1 +nrow(lisa_missed)):(349 + nrow(lisa_missed) + nrow(vic_missed)), 2))
   
   dataframe <- data.frame(dataframe)
-  colnames(dataframe) <- c("object", "observer", "detected", "distance", "species", "Trial")
+  colnames(dataframe) <- c("object", "observer", "detected", "distance", "species", "Trial", "size")
   
   dataframe <- dataframe[dataframe$species == species, ]
+  
+  if (species != 2) {
+    dataframe <- dataframe[, 1:6]
+  }
+  
   dataframe <- dataframe[dataframe$distance !=0 & !is.na(dataframe$distance), ]
 
   return(dataframe)
   
 }
 
-total_observations <- distanceData(1, overlap, lisa_missed, vic_missed)
+calcAbundance <- function(area, dataframe, model) {
+  
+  #calculates density and abundance using distance sampling data
+  #area = survey area (km2). Wollongong - Newcastle = 265km
+  #dataframe = total_observations data frame from distanceData function
+  #model = ddf model
+  
+  obs.table <- cbind(rep(1, nrow(dataframe)), dataframe$Trial, dataframe)
+  colnames(obs.table)[1:2] <- c("Region.Label", "Sample.Label")
+  
+  region.table <- data.frame(matrix(c(1, area), ncol = 2, byrow = T))
+  colnames(region.table) <- c("Region.Label", "Area")
+  
+  sample.table <- data.frame(cbind(rep(1, length(unique(dataframe$Trial))), unique(dataframe$Trial), rep(area, length(unique(dataframe$Trial)))))
+  colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
+  
+  dht(model, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
+      options = list(convert.units = 0.001))
+  
+}
+
+
+total_observations <- distanceData(2, overlap, lisa_missed, vic_missed)
 
 p_total <- ddf(method="io", mrmodel =~ glm(~distance), dsmodel =~ cds(key = "hr", formula=~1),
                data = total_observations, meta.data = list(left = 50, width = 500, point = FALSE))
@@ -154,18 +182,8 @@ summary(p_total)
 ddf.gof(p_total, main="Total observations goodness of fit")
 plot(p_total)
 
-obs.table <- cbind(rep(1, nrow(total_observations)), total_observations$Trial, total_observations)
-colnames(obs.table)[1:2] <- c("Region.Label", "Sample.Label")
 
-region.table <- data.frame(matrix(c(1, 270), ncol = 2, byrow = T))
-colnames(region.table) <- c("Region.Label", "Area")
-
-sample.table <- data.frame(cbind(rep(1, length(unique(total_observations$Trial))), unique(total_observations$Trial), rep(270, length(unique(total_observations$Trial)))))
-colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
-
-dht(p_total, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
-    options = list(convert.units = 0.001))
-
+calcAbundance(265, total_observations, p_total)
 
 
 
