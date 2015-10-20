@@ -8,6 +8,7 @@ dat <- dat[dat$Species != "", ]
 dat$Species[dat$Species == "B "] <- "B"
 dat$Species <- factor(dat$Species)
 
+dat$Trial <- as.numeric(dat$Date)
 
 kable(table(dat$Observer, dat$Species), format = "pandoc", caption = "Total sightings by each observer")
 
@@ -79,12 +80,8 @@ x <- barplot(missed_table, beside = TRUE, legend = c("Vic", "Lisa"), main = "Num
 par(mfrow = c(1, 2))
 hist(table(total_missed$Observer, total_missed$Date)[1, ], main = "Vic missed", xlab = "", xlim = c(0, 35), col = "lightgrey")
 hist(table(total_missed$Observer, total_missed$Date)[2, ], main = "Lisa missed", xlab = "", xlim = c(0, 35), col = "lightgrey")
-@
+
   
-dat <- read.csv("C:/Users/Lisa/Documents/phd/aerial survey/R/data/environmental_effort_20150407.csv", header = T)
-library(chron)
-dat$Time <- chron(times. = dat$Time, format = "h:m:s")
-dat.south <- dat[dat$Flight.Direction == "S", ]
 
 
 #missed sightings by date
@@ -120,98 +117,55 @@ ddf.gof(p_total, main="Total observations goodness of fit")
 plot(p_total)
 
 
-#double observer
+#double observer for all species
 
-total_observations <- cbind(1:nrow(overlap), rep(1, nrow(overlap)), rep(1, nrow(overlap)), overlap$Dist..from.transect, overlap$Species)
-total_observations <- rbind(total_observations, total_observations)
-total_observations[(nrow(overlap) + 1):nrow(total_observations), 2] <- 2
+distanceData <- function(species, overlap, lisa_missed, vic_missed) {
+  
+  #species code:  1 = baitfish, 2 = bottlenose dolphin
+  
+  dataframe <- cbind(1:nrow(overlap), rep(1, nrow(overlap)), rep(1, nrow(overlap)), overlap$Dist..from.transect, overlap$Species, overlap$Trial)
+  dataframe <- rbind(dataframe, dataframe)
+  dataframe[(nrow(overlap) + 1):nrow(dataframe), 2] <- 2
+  
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(lisa_missed)), rep(2, nrow(lisa_missed)), rep(1, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species, lisa_missed$Trial))
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(lisa_missed)), rep(1, nrow(lisa_missed)), rep(0, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species, lisa_missed$Trial))
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(vic_missed)), rep(1, nrow(vic_missed)), rep(1, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species, vic_missed$Trial))
+  dataframe <- rbind(dataframe, cbind((nrow(dataframe) + 1):(nrow(dataframe)  + nrow(vic_missed)), rep(2, nrow(vic_missed)), rep(0, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species, vic_missed$Trial))
+  
+  dataframe[, 1] <- c(rep(1:349, 2), rep(350:(350+nrow(lisa_missed) - 1), 2), rep((349 + 1 +nrow(lisa_missed)):(349 + nrow(lisa_missed) + nrow(vic_missed)), 2))
+  
+  dataframe <- data.frame(dataframe)
+  colnames(dataframe) <- c("object", "observer", "detected", "distance", "species", "Trial")
+  
+  dataframe <- dataframe[dataframe$species == species, ]
+  dataframe <- dataframe[dataframe$distance !=0 & !is.na(dataframe$distance), ]
 
-total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(lisa_missed)), rep(2, nrow(lisa_missed)), rep(1, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species))
-total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(lisa_missed)), rep(1, nrow(lisa_missed)), rep(0, nrow(lisa_missed)), lisa_missed$Dist..from.transect, lisa_missed$Species))
-total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(vic_missed)), rep(1, nrow(vic_missed)), rep(1, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species))
-total_observations <- rbind(total_observations, cbind((nrow(total_observations) + 1):(nrow(total_observations)  + nrow(vic_missed)), rep(2, nrow(vic_missed)), rep(0, nrow(vic_missed)), vic_missed$Dist..from.transect, vic_missed$Species))
+  return(dataframe)
+  
+}
 
-total_observations[, 1] <- c(rep(1:349, 2), rep(350:(350+nrow(lisa_missed) - 1), 2), rep((349 + 1 +nrow(lisa_missed)):(349 + nrow(lisa_missed) + nrow(vic_missed)), 2))
-
-total_observations <- data.frame(total_observations)
-colnames(total_observations) <- c("object", "observer", "detected", "distance", "species")
-
-total_observations <- total_observations[total_observations$species == 1, ]
-total_observations <- total_observations[total_observations$distance !=0 & !is.na(total_observations$distance), ]
+total_observations <- distanceData(1, overlap, lisa_missed, vic_missed)
 
 p_total <- ddf(method="io", mrmodel =~ glm(~distance), dsmodel =~ cds(key = "hr", formula=~1),
-               data = total_observations, meta.data = list(left = 50))
+               data = total_observations, meta.data = list(left = 50, width = 500, point = FALSE))
 
 
 summary(p_total)
 ddf.gof(p_total, main="Total observations goodness of fit")
 plot(p_total)
 
+obs.table <- cbind(rep(1, nrow(total_observations)), total_observations$Trial, total_observations)
+colnames(obs.table)[1:2] <- c("Region.Label", "Sample.Label")
 
-#------------------------ EFFORT FOR SOUTH BOUND FLIGHTS ----------------------#
+region.table <- data.frame(matrix(c(1, 270), ncol = 2, byrow = T))
+colnames(region.table) <- c("Region.Label", "Area")
 
-#initialize environmental variables
-envt.var.south <- matrix(0, ncol = 30)
-colnames(envt.var.south) <- c(
-  "Beaufort.Sea.State.south.1",
-  "Beaufort.Sea.State.south.0",  
-  "Beaufort.Sea.State.south.1.5",
-  "Beaufort.Sea.State.south.2",
-  "Beaufort.Sea.State.south.3",
-  "Beaufort.Sea.State.south.4", 
-  "Beaufort.Sea.State.south.5", 
-  "Cloud.cover.south.0",
-  "Cloud.cover.south.1",
-  "Cloud.cover.south.2",
-  "Cloud.cover.south.3",
-  "Cloud.cover.south.4",
-  "Cloud.cover.south.5",
-  "Cloud.cover.south.6",
-  "Cloud.cover.south.7",
-  "Cloud.cover.south.8",
-  "Water.clarity.south.1",
-  "Water.clarity.south.2",
-  "Water.clarity.south.3",
-  "Glare.south.0",
-  "Glare.south.10",
-  "Glare.south.30",
-  "Glare.south.15",
-  "Glare.south.25",
-  "Glare.south.5",
-  "Glare.south.20",
-  "Glare.south.35",
-  "Glare.south.50",
-  "Glare.south.60",
-  "Glare.south.100"
-)
+sample.table <- data.frame(cbind(rep(1, length(unique(total_observations$Trial))), unique(total_observations$Trial), rep(270, length(unique(total_observations$Trial)))))
+colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
 
+dht(p_total, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
+    options = list(convert.units = 0.001))
 
-#sighting effort for southbound data
-for (i in unique(dat.south$Date)) {
-  for (j in 1:(nrow(dat.south[dat.south$Date == i, ]) - 1)) {
-    
-    if (dat.south[dat.south$Date == i, ]$Type[j] != "LT") {
-      
-      
-      time.start <- dat.south$Time[dat.south$Date == i][j] 
-      time.stop  <- dat.south$Time[dat.south$Date == i][j + 1]
-      mins <- hours(time.stop - time.start)*60 + minutes(time.stop - time.start)
-      
-      
-      #add minute differences to each environmental level
-      for (k in c(5, 8, 9, 11)) {
-        w <- which(colnames(envt.var.south) == as.name(paste(names(dat.south)[k], ".south.", dat.south[dat.south$Date == i, ][j, k], sep = "")))
-        envt.var.south[1, w] <- envt.var.south[1, w] + mins
-      }
-    }
-  }
-}
-
-ss_percent <- c(envt.var.south[1], envt.var.south[4], envt.var.south[5], envt.var.south[6])/60
-t <- table(total_missed$Beaufort.Sea.State)
-missed_hr <- matrix(c(t[1]+t[2], t[3], t[4], t[5])/ss_percent, ncol = 4)
-colnames(missed_hr) <- c("1", "2", "3", "4")
-kable(missed_hr, format = "pandoc", caption = "Number of missed sightings per hour effort at each sea state")
 
 
 
