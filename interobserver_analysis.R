@@ -1,4 +1,8 @@
-#inter-observer aerial survey preliminary analysis
+#inter-observer aerial survey  analysis for 22 Lisa-Vic southbound flights
+#author: Lisa-Marie Harrison
+#date: 20/10/2015
+
+
 dat <- read.csv("C:/Users/Lisa/Documents/phd/aerial survey/R/data/interobserver_20151019.csv", header = T)
 library(knitr)
 library(mrds)
@@ -119,10 +123,11 @@ plot(p_total)
 
 #double observer for all species
 
-distanceData <- function(species, overlap, lisa_missed, vic_missed) {
+distanceData <- function(species, overlap, lisa_missed, vic_missed, truncate=NULL) {
   
   #sets up data frame for distance sampling analysis
   #species code:  1 = baitfish, 2 = bottlenose dolphin
+  #truncate: optional truncation distance in m
   
   dataframe <- cbind(1:nrow(overlap), rep(1, nrow(overlap)), rep(1, nrow(overlap)), overlap$Dist..from.transect, overlap$Species, overlap$Trial, overlap$Number)
   dataframe <- rbind(dataframe, dataframe)
@@ -139,6 +144,10 @@ distanceData <- function(species, overlap, lisa_missed, vic_missed) {
   colnames(dataframe) <- c("object", "observer", "detected", "distance", "species", "Trial", "size")
   
   dataframe <- dataframe[dataframe$species == species, ]
+  
+  if (!is.null(truncate)) {
+    dataframe <- dataframe[dataframe$distance <= truncate, ]
+  }
   
   if (species != 2) {
     dataframe <- dataframe[, 1:6]
@@ -163,19 +172,21 @@ calcAbundance <- function(area, dataframe, model) {
   region.table <- data.frame(matrix(c(1, area), ncol = 2, byrow = T))
   colnames(region.table) <- c("Region.Label", "Area")
   
-  sample.table <- data.frame(cbind(rep(1, length(unique(dataframe$Trial))), unique(dataframe$Trial), rep(area, length(unique(dataframe$Trial)))))
+  sample.table <- data.frame(cbind(rep(1, length(unique(dataframe$Trial))), unique(dataframe$Trial), rep(265, length(unique(dataframe$Trial)))))
   colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
   
-  dht(model, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
+  d <- dht(model, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
       options = list(convert.units = 0.001))
+  
+  return(d)
   
 }
 
 
-total_observations <- distanceData(2, overlap, lisa_missed, vic_missed)
+total_observations <- distanceData(2, overlap, lisa_missed, vic_missed, truncate = 300)
 
 p_total <- ddf(method="io", mrmodel =~ glm(~distance), dsmodel =~ cds(key = "hr", formula=~1),
-               data = total_observations, meta.data = list(left = 50, width = 500, point = FALSE))
+               data = total_observations, meta.data = list(left = 50, width = 300, point = FALSE))
 
 
 summary(p_total)
@@ -183,8 +194,8 @@ ddf.gof(p_total, main="Total observations goodness of fit")
 plot(p_total)
 
 
-calcAbundance(265, total_observations, p_total)
-
+d <- calcAbundance(265*0.3, total_observations, p_total)
+d
 
 
 
