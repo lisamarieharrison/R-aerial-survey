@@ -181,9 +181,9 @@ createTab <- function(species, dat, flight_direction, env_variable, env_dat=NULL
   #env_variable = character containing environmental variable. e.g.: "Glare"
   #env_dat = vector of hours at each environmental level. Not needed if using Wind.Speed
   
-  if (env_variable == "Wind.speed") {
+  if (env_variable == "Wind.speed" | env_variable == "Wind.direction") {
     
-    #wind speed separate because it is measured only once per survey
+    #wind separate because it is measured only once per survey
     
     wind_tab <- table(dat$Date[dat$Flight.Direction == flight_direction 
                                & dat$Species == species], 
@@ -252,3 +252,9 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
   scale_fill_manual(values = c("grey16", "red", "blue")) +
   scale_color_manual(values = c("grey16", "red", "blue")) + 
   theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
+
+
+
+
+
+
