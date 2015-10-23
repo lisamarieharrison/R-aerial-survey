@@ -140,32 +140,46 @@ for (i in unique(dat.south$Date)) {
   }
 }
 
+sightingsAtLevel <- function(environmenal_hrs, dat, env_variable, species, flight_direction) {
+  
+  #calculates the number of sightings per hour at each environmental condition level
+  #environmental_hrs = vector of hours at each level. e.g.: envt.var.south
+  #dat = full data set of observations. e.g.: lisa_obs
+  #env_variable = character containing the name of the environmental variable
+  #species = character containing the species code. e.g.: "B" = baitfish
+  #flight_direction = character containing the flight direction. "S" = south, "N" = north
+  
+  hrs <- environmenal_hrs[grep(env_variable, colnames(environmenal_hrs))]/60
+  t <- table(factor(dat[dat$Species == species & dat$Flight.Direction == flight_direction, which(colnames(dat) == env_variable)],
+                    levels = unique(dat[dat$Flight.Direction == flight_direction, 
+                                        which(colnames(dat) == env_variable)])))
+  t <- t[order(names(t))]                                                                                                                                 
+  sightings_hr <- matrix(t/hrs, ncol = length(t))
+  colnames(sightings_hr) <- names(t)
+  
+  #species hash table
+  species_full <- cbind(c("B", "BOT", "S"), c("Baitfish", "Dolphins", "Sharks"))
+  Species <- species_full[which(species_full[, 1] == species), 2]
+  
+  kable(sightings_hr, format = "pandoc", caption = paste("Number of sightings per hour effort at each", env_variable, "for", Species))
+  
+}
 
-#sea state
-ss_hrs <- c(envt.var.south[1], envt.var.south[4], envt.var.south[5], envt.var.south[6])/60
-t <- table(lisa_obs$Beaufort.Sea.State[lisa_obs$Species == "B" & lisa_obs$Flight.Direction == "S"])
-sightings_hr <- matrix(c(t[1], t[2], t[3], t[4])/ss_hrs, ncol = 4) #wrong if no sightings at a level
-colnames(sightings_hr) <- c("1", "2", "3", "4")
-kable(sightings_hr, format = "pandoc", caption = "Number of sightings per hour effort at each sea state")
+#sea state table
+sightingsAtLevel(environmenal_hrs = envt.var.south, dat = lisa_obs, env_variable = "Beaufort.Sea.State", species = "B", flight_direction = "S")
+
+#turbidity table
+sightingsAtLevel(environmenal_hrs = envt.var.south, dat = lisa_obs, env_variable = "Water.clarity", species = "B", flight_direction = "S")
 
 
-#turbidity
-t_hrs <- c(envt.var.south[17:19])/60
-t <- table(lisa_obs$Water.clarity[lisa_obs$Species == "S" & lisa_obs$Flight.Direction == "S"])
-sightings_hr <- matrix(c(t[1], t[2], t[3])/t_hrs, ncol = 3) #wrong if no sightings at a level
-colnames(sightings_hr) <- c("1", "2", "3")
-kable(sightings_hr, format = "pandoc", caption = "Number of sightings per hour effort at each turbidity")
-
-
-#sightings per survey at each environmental level
-
-createTab <- function(species, dat, flight_direction, env_variable) {
+createTab <- function(species, dat, flight_direction, env_variable, env_dat=NULL) {
   
   #creates table for ggplot sightings per survey at environmental level
   #species = character with species code. e.g.: "B"
   #dat = full data frame of observations
   #flight_direction = character containing flight direction. "N" = north, "S" = south
   #env_variable = character containing environmental variable. e.g.: "Glare"
+  #env_dat = vector of hours at each environmental level. Not needed if using Wind.Speed
   
   if (env_variable == "Wind.speed") {
     
@@ -177,6 +191,7 @@ createTab <- function(species, dat, flight_direction, env_variable) {
                           & dat$Species == species, which(colnames(dat) == env_variable)], 
                           levels = unique(dat[dat$Flight.Direction == flight_direction,
                                               which(colnames(dat) == env_variable)])))
+    wind_tab <- wind_tab[, order(as.numeric(colnames(wind_tab)))]
     wind_tab[wind_tab == 0] <- NA
     x <- as.numeric(colnames(wind_tab))
     y <- colMeans(wind_tab, na.rm = TRUE)
@@ -189,7 +204,7 @@ createTab <- function(species, dat, flight_direction, env_variable) {
                              levels = unique(dat[dat$Flight.Direction == flight_direction,
                                                  which(colnames(dat) == env_variable)])))
     species_tab <- species_tab[order(names(species_tab))]
-    cc_hrs <- envt.var.south[grep(env_variable, colnames(envt.var.south))]/60
+    cc_hrs <- env_dat[grep(env_variable, colnames(env_dat))]/60
     
     x <- as.numeric(names(species_tab))
     y <- c(species_tab/cc_hrs)
@@ -224,9 +239,9 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
 
 
 #Cloud cover
-baitfish <- createTab(species = "B", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover")
-dolphins <- createTab(species = "BOT", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover")
-sharks   <- createTab(species = "S", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover")
+baitfish <- createTab(species = "B", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover", env_dat = envt.var.south)
+dolphins <- createTab(species = "BOT", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover", env_dat = envt.var.south)
+sharks   <- createTab(species = "S", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover", env_dat = envt.var.south)
 
 a <- rbind(baitfish, dolphins, sharks)
 ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) + 
