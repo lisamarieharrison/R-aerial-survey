@@ -162,44 +162,40 @@ kable(sightings_hr, format = "pandoc", caption = "Number of sightings per hour e
 
 #sightings per survey at each wind strength  
 
-wind_tab_B <- table(lisa_obs$Date[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "B"], 
-                    lisa_obs$Wind.speed[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "B"])
-wind_tab_B[wind_tab_B == 0] <- NA
+createTab <- function(species, dat, flight_direction, env_variable) {
+  
+  #creates table for ggplot sightings per survey at environmental level
+  #species = character with species code. e.g.: "B"
+  #dat = full data frame of observations
+  #flight_direction = character containing flight direction. "N" = north, "S" = south
+  #env_variable = character containing environmental variable. e.g.: "Glare"
+  
+  wind_tab <- table(dat$Date[dat$Flight.Direction == flight_direction 
+                                  & dat$Species == species], 
+                    dat[dat$Flight.Direction == flight_direction 
+                                          & dat$Species == species, which(colnames(dat) == env_variable)])
+  wind_tab[wind_tab == 0] <- NA
+  
+  x <- as.numeric(colnames(wind_tab))
+  y <- colMeans(wind_tab, na.rm = TRUE)
+  
+  #create hash table for full species names
+  species_full <- cbind(c("B", "BOT", "S"), c("Baitfish", "Dolphins", "Sharks"))
+  
+  Species <- rep(species_full[which(species_full[, 1] == species), 2], length(x))
+  plot_dat <- data.frame(x, y, Species)
+  
+  return(plot_dat)
+}
 
-wind_tab_BOT <- table(lisa_obs$Date[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "BOT"], 
-                    lisa_obs$Wind.speed[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "BOT"])
-wind_tab_BOT[wind_tab_BOT == 0] <- NA
+baitfish <- createTab(species = "B", dat = lisa_obs, flight_direction = "S", env_variable = "Wind.speed")
+dolphins <- createTab(species = "BOT", dat = lisa_obs, flight_direction = "S", env_variable = "Wind.speed")
+sharks <- createTab(species = "S", dat = lisa_obs, flight_direction = "S", env_variable = "Wind.speed")
 
-wind_tab_S <- table(lisa_obs$Date[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "S"], 
-                      lisa_obs$Wind.speed[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "S"])
-wind_tab_S[wind_tab_S == 0] <- NA
-
-plot(as.numeric(colnames(wind_tab_B)), colMeans(wind_tab_B, na.rm = TRUE), xlab = "Wind Speed (km/h)",
-     ylab = "Mean number of sightings", type = "l", lwd = 2)
-lines(as.numeric(colnames(wind_tab_BOT)), colMeans(wind_tab_BOT, na.rm = TRUE), col = "red", lwd = 2)
-lines(as.numeric(colnames(wind_tab_S)), colMeans(wind_tab_S, na.rm = TRUE), col = "blue", lwd = 2)
-
-legend("topright", c("Baitfish", "Dolphins", "Sharks"), col = c("black", "red", "blue"), lwd = 2, bty = "n")
-
-x <- as.numeric(colnames(wind_tab_B))
-y <- colMeans(wind_tab_B, na.rm = TRUE)
-Species <- rep("Baitfish", length(x))
-baitfish <- data.frame(x, y, Species)
-
-x <- as.numeric(colnames(wind_tab_BOT))
-y <- colMeans(wind_tab_BOT, na.rm = TRUE)
-Species <- rep("Dolphins", length(x))
-dolphin <- data.frame(x, y, Species)
-
-x <- as.numeric(colnames(wind_tab_S))
-y <- colMeans(wind_tab_S, na.rm = TRUE)
-Species <- rep("Sharks", length(x))
-shark <- data.frame(x, y, Species)
-
-a <- rbind(baitfish, dolphin, shark)
+a <- rbind(baitfish, dolphins, sharks)
 ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) + 
   geom_point() + 
-  geom_smooth() + 
+  geom_smooth(method = loess) + 
   scale_y_continuous(limits = c(0, NA)) +
   xlab("Wind Speed (km/h)") + 
   ylab("Mean sightings per survey") + 
