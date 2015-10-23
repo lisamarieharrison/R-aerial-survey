@@ -181,6 +181,32 @@ lines(as.numeric(colnames(wind_tab_S)), colMeans(wind_tab_S, na.rm = TRUE), col 
 
 legend("topright", c("Baitfish", "Dolphins", "Sharks"), col = c("black", "red", "blue"), lwd = 2, bty = "n")
 
+x <- as.numeric(colnames(wind_tab_B))
+y <- colMeans(wind_tab_B, na.rm = TRUE)
+Species <- rep("Baitfish", length(x))
+baitfish <- data.frame(x, y, Species)
+
+x <- as.numeric(colnames(wind_tab_BOT))
+y <- colMeans(wind_tab_BOT, na.rm = TRUE)
+Species <- rep("Dolphins", length(x))
+dolphin <- data.frame(x, y, Species)
+
+x <- as.numeric(colnames(wind_tab_S))
+y <- colMeans(wind_tab_S, na.rm = TRUE)
+Species <- rep("Sharks", length(x))
+shark <- data.frame(x, y, Species)
+
+a <- rbind(baitfish, dolphin, shark)
+ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) + 
+  geom_point() + 
+  geom_smooth() + 
+  scale_y_continuous(limits = c(0, NA)) +
+  xlab("Wind Speed (km/h)") + 
+  ylab("Mean sightings per survey") + 
+  scale_fill_manual(values = c("grey16", "red", "blue")) +
+  scale_color_manual(values = c("grey16", "red", "blue")) + 
+  theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
+
 
 
 
