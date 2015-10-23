@@ -1,16 +1,23 @@
 #analysis of aerial survey data using only Lisa's observations
+#author: Lisa-Marie Harrison
+#date: 22/10/2015\
 
 setwd("C:/Users/Lisa/Documents/phd/aerial survey/R/data")
 lisa_obs <- read.csv("lisa_full_observations.csv", header = T)
 library(mrds)
 library(chron)
+library(knitr)
 
 table(lisa_obs$Species)
 
 lisa_obs$Trial <- as.numeric(lisa_obs$Date)
 
+#total sightings
+table(lisa_obs$Flight.Direction, lisa_obs$Species)
+
 #combine all shark species into a single category, except hammerheads
 lisa_obs$Species[lisa_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
+
 
 #---------------------------- DETECTION FUNCTIONS -----------------------------#
 
@@ -139,23 +146,41 @@ for (i in unique(dat.south$Date)) {
 
 #sea state
 ss_hrs <- c(envt.var.south[1], envt.var.south[4], envt.var.south[5], envt.var.south[6])/60
-t <- table(lisa_obs$Beaufort.Sea.State[lisa_obs$Species == "B"])
-sightings_hr <- matrix(c(t[1]+t[2], t[3], t[4], t[5])/ss_hrs, ncol = 4)
+t <- table(lisa_obs$Beaufort.Sea.State[lisa_obs$Species == "B" & lisa_obs$Flight.Direction == "S"])
+sightings_hr <- matrix(c(t[1], t[2], t[3], t[4])/ss_hrs, ncol = 4) #wrong if no sightings at a level
 colnames(sightings_hr) <- c("1", "2", "3", "4")
 kable(sightings_hr, format = "pandoc", caption = "Number of sightings per hour effort at each sea state")
 
 
 #turbidity
 t_hrs <- c(envt.var.south[17:19])/60
-t <- table(lisa_obs$Water.clarity[lisa_obs$Species == "B"])
-sightings_hr <- matrix(c(t[1], t[2], t[3])/t_hrs, ncol = 3)
+t <- table(lisa_obs$Water.clarity[lisa_obs$Species == "S" & lisa_obs$Flight.Direction == "S"])
+sightings_hr <- matrix(c(t[1], t[2], t[3])/t_hrs, ncol = 3) #wrong if no sightings at a level
 colnames(sightings_hr) <- c("1", "2", "3")
 kable(sightings_hr, format = "pandoc", caption = "Number of sightings per hour effort at each turbidity")
 
 
-  
-  
-  
-  
-  
+#sightings per survey at each wind strength  
+
+wind_tab_B <- table(lisa_obs$Date[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "B"], 
+                    lisa_obs$Wind.speed[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "B"])
+wind_tab_B[wind_tab_B == 0] <- NA
+
+wind_tab_BOT <- table(lisa_obs$Date[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "BOT"], 
+                    lisa_obs$Wind.speed[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "BOT"])
+wind_tab_BOT[wind_tab_BOT == 0] <- NA
+
+wind_tab_S <- table(lisa_obs$Date[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "S"], 
+                      lisa_obs$Wind.speed[lisa_obs$Flight.Direction == "S" & lisa_obs$Species == "S"])
+wind_tab_S[wind_tab_S == 0] <- NA
+
+plot(as.numeric(colnames(wind_tab_B)), colMeans(wind_tab_B, na.rm = TRUE), xlab = "Wind Speed (km/h)",
+     ylab = "Mean number of sightings", type = "l", lwd = 2)
+lines(as.numeric(colnames(wind_tab_BOT)), colMeans(wind_tab_BOT, na.rm = TRUE), col = "red", lwd = 2)
+lines(as.numeric(colnames(wind_tab_S)), colMeans(wind_tab_S, na.rm = TRUE), col = "blue", lwd = 2)
+
+legend("topright", c("Baitfish", "Dolphins", "Sharks"), col = c("black", "red", "blue"), lwd = 2, bty = "n")
+
+
+
 
