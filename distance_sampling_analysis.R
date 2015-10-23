@@ -83,15 +83,12 @@ for (i in 2:length(test)) {
 }  
 
 #initialize environmental variables
-envt.var.south <- matrix(0, ncol = 30)
+envt.var.south <- matrix(0, ncol = 27)
 colnames(envt.var.south) <- c(
   "Beaufort.Sea.State.south.1",
-  "Beaufort.Sea.State.south.0",  
-  "Beaufort.Sea.State.south.1.5",
   "Beaufort.Sea.State.south.2",
   "Beaufort.Sea.State.south.3",
   "Beaufort.Sea.State.south.4", 
-  "Beaufort.Sea.State.south.5", 
   "Cloud.cover.south.0",
   "Cloud.cover.south.1",
   "Cloud.cover.south.2",
@@ -160,7 +157,7 @@ colnames(sightings_hr) <- c("1", "2", "3")
 kable(sightings_hr, format = "pandoc", caption = "Number of sightings per hour effort at each turbidity")
 
 
-#sightings per survey at each wind strength and cloud cover level
+#sightings per survey at each environmental level
 
 createTab <- function(species, dat, flight_direction, env_variable) {
   
@@ -170,15 +167,36 @@ createTab <- function(species, dat, flight_direction, env_variable) {
   #flight_direction = character containing flight direction. "N" = north, "S" = south
   #env_variable = character containing environmental variable. e.g.: "Glare"
   
-  wind_tab <- table(dat$Date[dat$Flight.Direction == flight_direction 
-                                  & dat$Species == species], 
-                    dat[dat$Flight.Direction == flight_direction 
-                                          & dat$Species == species, which(colnames(dat) == env_variable)])
-  wind_tab[wind_tab == 0] <- NA
+  if (env_variable == "Wind.speed") {
+    
+    #wind speed separate because it is measured only once per survey
+    
+    wind_tab <- table(dat$Date[dat$Flight.Direction == flight_direction 
+                               & dat$Species == species], 
+                      factor(dat[dat$Flight.Direction == flight_direction 
+                          & dat$Species == species, which(colnames(dat) == env_variable)], 
+                          levels = unique(dat[dat$Flight.Direction == flight_direction,
+                                              which(colnames(dat) == env_variable)])))
+    wind_tab[wind_tab == 0] <- NA
+    x <- as.numeric(colnames(wind_tab))
+    y <- colMeans(wind_tab, na.rm = TRUE)
+    y[is.nan(y)] <- 0
+    
+  } else {
+    
+    species_tab <- table(factor(dat[dat$Flight.Direction == flight_direction 
+                                 & dat$Species == species, which(colnames(dat) == env_variable)], 
+                             levels = unique(dat[dat$Flight.Direction == flight_direction,
+                                                 which(colnames(dat) == env_variable)])))
+    species_tab <- species_tab[order(names(species_tab))]
+    cc_hrs <- envt.var.south[grep(env_variable, colnames(envt.var.south))]/60
+    
+    x <- as.numeric(names(species_tab))
+    y <- c(species_tab/cc_hrs)
+    
+  }
   
-  x <- as.numeric(colnames(wind_tab))
-  y <- colMeans(wind_tab, na.rm = TRUE)
-  
+
   #create hash table for full species names
   species_full <- cbind(c("B", "BOT", "S"), c("Baitfish", "Dolphins", "Sharks"))
   
@@ -198,7 +216,6 @@ a <- rbind(baitfish, dolphins, sharks)
 ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) + 
   geom_point() + 
   geom_smooth(method = loess) + 
-  scale_y_continuous(limits = c(0, NA)) +
   xlab("Wind Speed (km/h)") + 
   ylab("Mean sightings per survey") + 
   scale_fill_manual(values = c("grey16", "red", "blue")) +
@@ -215,12 +232,8 @@ a <- rbind(baitfish, dolphins, sharks)
 ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) + 
   geom_point() + 
   geom_smooth(method = loess) + 
-  scale_y_continuous(limits = c(-5, NA)) +
   xlab("Cloud cover (0 = none, 8 = full)") + 
-  ylab("Mean sightings per survey") + 
+  ylab("Mean sightings per hour") + 
   scale_fill_manual(values = c("grey16", "red", "blue")) +
   scale_color_manual(values = c("grey16", "red", "blue")) + 
   theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
-
-
-
