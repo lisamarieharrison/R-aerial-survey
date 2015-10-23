@@ -160,7 +160,7 @@ colnames(sightings_hr) <- c("1", "2", "3")
 kable(sightings_hr, format = "pandoc", caption = "Number of sightings per hour effort at each turbidity")
 
 
-#sightings per survey at each wind strength  
+#sightings per survey at each wind strength and cloud cover level
 
 createTab <- function(species, dat, flight_direction, env_variable) {
   
@@ -188,9 +188,11 @@ createTab <- function(species, dat, flight_direction, env_variable) {
   return(plot_dat)
 }
 
+
+#wind speed
 baitfish <- createTab(species = "B", dat = lisa_obs, flight_direction = "S", env_variable = "Wind.speed")
 dolphins <- createTab(species = "BOT", dat = lisa_obs, flight_direction = "S", env_variable = "Wind.speed")
-sharks <- createTab(species = "S", dat = lisa_obs, flight_direction = "S", env_variable = "Wind.speed")
+sharks   <- createTab(species = "S", dat = lisa_obs, flight_direction = "S", env_variable = "Wind.speed")
 
 a <- rbind(baitfish, dolphins, sharks)
 ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) + 
@@ -203,6 +205,22 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
   scale_color_manual(values = c("grey16", "red", "blue")) + 
   theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
 
+
+#Cloud cover
+baitfish <- createTab(species = "B", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover")
+dolphins <- createTab(species = "BOT", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover")
+sharks   <- createTab(species = "S", dat = lisa_obs, flight_direction = "S", env_variable = "Cloud.cover")
+
+a <- rbind(baitfish, dolphins, sharks)
+ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) + 
+  geom_point() + 
+  geom_smooth(method = loess) + 
+  scale_y_continuous(limits = c(-5, NA)) +
+  xlab("Cloud cover (0 = none, 8 = full)") + 
+  ylab("Mean sightings per survey") + 
+  scale_fill_manual(values = c("grey16", "red", "blue")) +
+  scale_color_manual(values = c("grey16", "red", "blue")) + 
+  theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
 
 
 
