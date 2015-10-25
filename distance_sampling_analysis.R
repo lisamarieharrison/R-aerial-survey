@@ -7,6 +7,7 @@ lisa_obs <- read.csv("lisa_full_observations.csv", header = T)
 library(mrds)
 library(chron)
 library(knitr)
+library(ggplot2)
 
 table(lisa_obs$Species)
 
@@ -23,13 +24,24 @@ lisa_obs$Species[lisa_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
 
 
 
-createData <- function(species, lisa_obs, truncate=NULL, direction) {
+createData <- function(species, lisa_obs, direction, truncate=NULL) {
   
-  lisa_obs <- lisa_obs[lisa_obs$Flight.Direction == direction & lisa_obs$Type == "S" 
-                       & lisa_obs$Dist..from.transect <= truncate &
-                       lisa_obs$Dist..from.transect !=0 & !is.na(lisa_obs$Dist..from.transect)
-                       & lisa_obs$Species == species, ]
+  #creates data frame in the form mrds requires for distance sampling
+  #species = character with the species code. e.g.: "BOT" = bottlenose dolphin
+  #lisa_obs = data.frame of all observations
+  #direction = character with flight direction. "N" = north, "S" = south
+  #truncate = optional numeric specifying the distance (m) from transect to truncate sightings
+  
+  lisa_obs <- lisa_obs[lisa_obs$Flight.Direction == direction & 
+                         lisa_obs$Type == "S" & 
+                         lisa_obs$Dist..from.transect !=0 & 
+                         !is.na(lisa_obs$Dist..from.transect) & 
+                         lisa_obs$Species == species, ]
 
+  if (!is.null(truncate)) {
+    lisa_obs <- lisa_obs[lisa_obs$Dist..from.transect <= truncate, ]
+  }
+  
   total_observations <- cbind(1:nrow(lisa_obs), rep(1, nrow(lisa_obs)), rep(1, nrow(lisa_obs)), lisa_obs$Dist..from.transect, lisa_obs$Species, lisa_obs$Trial, lisa_obs$Number)
   total_observations <- data.frame(total_observations)
   colnames(total_observations) <- c("object", "observer", "detected", "distance", "species", "Trial", "size")
@@ -129,7 +141,7 @@ for (i in unique(dat.south$Date)) {
       time.stop  <- chron(times. = as.character(dat.south$Time[dat.south$Date == i][j + 1]), format = "h:m:s")
       mins <- hours(time.stop - time.start)*60 + minutes(time.stop - time.start)
       
-      if (mins > 30) print(c(i, mins))
+      if (mins > 30) print(c(i, mins)) #check for times that have been typed in incorrectly
       
       #add minute differences to each environmental level
       for (k in c(22, 25, 26, 28)) {
@@ -233,6 +245,7 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
   geom_smooth(method = loess) + 
   xlab("Wind Speed (km/h)") + 
   ylab("Mean sightings per survey") + 
+  coord_cartesian(ylim = c(0, 45)) +
   scale_fill_manual(values = c("grey16", "red", "blue")) +
   scale_color_manual(values = c("grey16", "red", "blue")) + 
   theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
@@ -249,6 +262,7 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
   geom_smooth(method = loess) + 
   xlab("Cloud cover (0 = none, 8 = full)") + 
   ylab("Mean sightings per hour") + 
+  coord_cartesian(ylim = c(0, 45)) +
   scale_fill_manual(values = c("grey16", "red", "blue")) +
   scale_color_manual(values = c("grey16", "red", "blue")) + 
   theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
