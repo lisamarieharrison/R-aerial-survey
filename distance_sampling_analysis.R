@@ -57,7 +57,7 @@ createData <- function(species, lisa_obs, direction, truncate=NULL) {
   
 }
 
-total_observations <- createData(species = "S", lisa_obs, truncate = 1000, direction = "S")
+total_observations <- createData(species = "BOT", lisa_obs, truncate = 1000, direction = "S")
 
 p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), 
                data = total_observations, meta.data = list(left = 50, width = 1000))
@@ -67,7 +67,7 @@ plot(p_total, main = "Baitfish - NORTH")
 
 
 
-area <- 265*0.3
+area <- 265
 obs.table <- cbind(rep(1, nrow(total_observations)), total_observations$Trial, total_observations)
 colnames(obs.table)[1:2] <- c("Region.Label", "Sample.Label")
 
@@ -277,6 +277,14 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
 est <- 0.5 #abundance estimate for 300m S transect
 adjusted <- est/0.171
 
+
+#-----------------------AVAILABILITY BIAS FOR DOLPHINS-------------------------#
+
+#Gazo et al 2004 found that mean proportion of time that a bottlenose dolphin pod
+#spent at the surface was 0.77. 23% of pods are underwater and unavailable for sampling
+#149 groups seen with average group size = 16.1
+
+(149/0.77)/(265*47*0.30)*16.1*265
 
 
 
