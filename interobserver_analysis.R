@@ -150,7 +150,7 @@ distanceData <- function(species, overlap, lisa_missed, vic_missed, truncate=NUL
   }
   
   if (species != 2) {
-    dataframe <- dataframe[, 1:6]
+    dataframe <- dataframe[, 1:6] #remove size unless species is Bottlenose dolphin
   }
   
   dataframe <- dataframe[dataframe$distance !=0 & !is.na(dataframe$distance), ]
