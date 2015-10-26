@@ -1,6 +1,6 @@
 #analysis of aerial survey data using only Lisa's observations
 #author: Lisa-Marie Harrison
-#date: 22/10/2015\
+#date: 22/10/2015
 
 setwd("C:/Users/Lisa/Documents/phd/aerial survey/R/data")
 lisa_obs <- read.csv("lisa_full_observations.csv", header = T)
@@ -31,6 +31,7 @@ createData <- function(species, lisa_obs, direction, truncate=NULL) {
   #lisa_obs = data.frame of all observations
   #direction = character with flight direction. "N" = north, "S" = south
   #truncate = optional numeric specifying the distance (m) from transect to truncate sightings
+  #return = data.frame with columns object, observer, detected, distance, species, Trial, size
   
   lisa_obs <- lisa_obs[lisa_obs$Flight.Direction == direction & 
                          lisa_obs$Type == "S" & 
@@ -46,10 +47,10 @@ createData <- function(species, lisa_obs, direction, truncate=NULL) {
   total_observations <- data.frame(total_observations)
   colnames(total_observations) <- c("object", "observer", "detected", "distance", "species", "Trial", "size")
 
-  if (species != "BOT") {
-    total_observations <- total_observations[, 1:6]
-  } else {
+  if (species == "BOT") {
     total_observations <- total_observations[!is.na(total_observations$size), ]
+  } else {
+    total_observations <- total_observations[, 1:6]
   }
   
   return(total_observations)
@@ -92,7 +93,7 @@ for (i in 2:length(test)) {
   if ((test[i] == "LT" & test[i - 1] == "LT") | (test[i] == "RT" & test[i - 1] == "RT")) {
     dat.south <- dat.south[-i, ]
   }
-}  
+}
 
 #initialize environmental variables
 envt.var.south <- matrix(0, ncol = 27)
@@ -139,9 +140,11 @@ for (i in unique(dat.south$Date)) {
       
       time.start <- chron(times. = as.character(dat.south$Time[dat.south$Date == i][j]), format = "h:m:s")
       time.stop  <- chron(times. = as.character(dat.south$Time[dat.south$Date == i][j + 1]), format = "h:m:s")
-      mins <- hours(time.stop - time.start)*60 + minutes(time.stop - time.start)
+      mins       <- hours(time.stop - time.start)*60 + minutes(time.stop - time.start)
       
-      if (mins > 30) print(c(i, mins)) #check for times that have been typed in incorrectly
+      if (mins > 30) {
+        print(c(i, mins)) #check for times that have been typed in incorrectly
+      }
       
       #add minute differences to each environmental level
       for (k in c(22, 25, 26, 28)) {
@@ -222,7 +225,6 @@ createTab <- function(species, dat, flight_direction, env_variable, env_dat=NULL
     y <- c(species_tab/cc_hrs)
     
   }
-  
 
   #create hash table for full species names
   species_full <- cbind(c("B", "BOT", "S"), c("Baitfish", "Dolphins", "Sharks"))
@@ -266,6 +268,14 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
   scale_fill_manual(values = c("grey16", "red", "blue")) +
   scale_color_manual(values = c("grey16", "red", "blue")) + 
   theme(axis.text = element_text(colour = "black"), text = element_text(size = 30), legend.title = element_blank())
+
+
+#------------------------PERCEPTION BIAS FOR SHARKS----------------------------#
+
+#Robbins et al found 17.1% of shark analogues were seen from a helicopter
+
+est <- 0.5 #abundance estimate for 300m S transect
+adjusted <- est/0.171
 
 
 
