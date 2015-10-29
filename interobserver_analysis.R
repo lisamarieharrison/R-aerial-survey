@@ -12,7 +12,6 @@ dat <- dat[dat$Species != "", ]
 dat$Species[dat$Species == "B "] <- "B"
 dat$Species <- factor(dat$Species)
 
-dat$Trial <- as.numeric(dat$Date)
 
 kable(table(dat$Observer, dat$Species), format = "pandoc", caption = "Total sightings by each observer")
 
@@ -159,22 +158,30 @@ distanceData <- function(species, overlap, lisa_missed, vic_missed, truncate=NUL
   
 }
 
-calcAbundance <- function(area, dataframe, model) {
+calcAbundance <- function(area, dataframe, model, type) {
   
   #calculates density and abundance using distance sampling data
   #area = survey area (km2). Wollongong - Newcastle = 265km
   #dataframe = total_observations data frame from distanceData function
   #model = ddf model
+  #type = "character containing which obs to include, "trial" = only observer 1, "io" = both
   
+
   obs.table <- cbind(rep(1, nrow(dataframe)), dataframe$Trial, dataframe)
   colnames(obs.table)[1:2] <- c("Region.Label", "Sample.Label")
+  
+  if (type == "trial") {
+    obs.table <- obs.table[obs.table$observer == 1 & obs.table$detected == 1, ]
+  } else {
+    obs.table <- obs.table[duplicated(obs.table$object), ] #remove duplicate detections
+  }
   
   region.table <- data.frame(matrix(c(1, area), ncol = 2, byrow = T))
   colnames(region.table) <- c("Region.Label", "Area")
   
-  sample.table <- data.frame(cbind(rep(1, length(unique(dataframe$Trial))), unique(dataframe$Trial), rep(265, length(unique(dataframe$Trial)))))
+  sample.table <- data.frame(cbind(rep(1, 22), c(1:22), rep(265, 22)))
   colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
-  
+
   d <- dht(model, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
       options = list(convert.units = 0.001))
   
@@ -183,18 +190,18 @@ calcAbundance <- function(area, dataframe, model) {
 }
 
 
-total_observations <- distanceData(2, overlap, lisa_missed, vic_missed, truncate = 300)
+total_observations <- distanceData(12, overlap, lisa_missed, vic_missed, truncate = 1000)
 
-p_total <- ddf(method="io", mrmodel =~ glm(~distance), dsmodel =~ cds(key = "hr", formula=~1),
-               data = total_observations, meta.data = list(left = 50, width = 300, point = FALSE))
+p_total <- ddf(method="io", mrmodel =~ glm(~distance), dsmodel =~ cds(key = "gamma", formula=~1),
+               data = total_observations, meta.data = list(left = 50, width = 1000, point = FALSE))
 
 
 summary(p_total)
-ddf.gof(p_total, main="Total observations goodness of fit")
-plot(p_total)
+#ddf.gof(p_total, main="Total observations goodness of fit")
+#plot(p_total)
 
 
-d <- calcAbundance(265*0.3, total_observations, p_total)
+d <- calcAbundance(265, dataframe = total_observations, p_total, type = p_total$method)
 d
 
 
