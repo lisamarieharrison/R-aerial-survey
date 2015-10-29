@@ -9,9 +9,10 @@ library(chron)
 library(knitr)
 library(ggplot2)
 
-table(lisa_obs$Species)
+#source mrds code modified to use only single sided strip width
+source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/mrds_modified_functions.R")
 
-lisa_obs$Trial <- as.numeric(lisa_obs$Date)
+table(lisa_obs$Species)
 
 #total sightings
 table(lisa_obs$Flight.Direction, lisa_obs$Species)
@@ -57,28 +58,39 @@ createData <- function(species, lisa_obs, direction, truncate=NULL) {
   
 }
 
-total_observations <- createData(species = "BOT", lisa_obs, truncate = 1000, direction = "S")
+calcAbundanceSingle <- function(area, dataframe, model) {
+  
+  #calculates density and abundance using distance sampling data
+  #area = survey area (km2). Wollongong - Newcastle = 265km
+  #dataframe = total_observations data frame from distanceData function
+  #model = ddf model
+  
+  obs.table <- cbind(rep(1, nrow(dataframe)), dataframe$Trial, dataframe)
+  colnames(obs.table)[1:2] <- c("Region.Label", "Sample.Label")
+  
+  region.table <- data.frame(matrix(c(1, area), ncol = 2, byrow = T))
+  colnames(region.table) <- c("Region.Label", "Area")
+  
+  sample.table <- data.frame(cbind(rep(1, 47), c(1:47), rep(265, 47)))
+  colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
+  
+  d <- dht(model, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
+           options = list(convert.units = 0.001))
+  
+  return(d)
+  
+}
+
+total_observations <- createData(species = "S", lisa_obs, truncate = 1000, direction = "S")
 
 p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), 
                data = total_observations, meta.data = list(left = 50, width = 1000))
 summary(p_total)
-ddf.gof(p_total, main="Total observations goodness of fit")
-plot(p_total, main = "Baitfish - NORTH")
+#ddf.gof(p_total, main="Total observations goodness of fit")
+#plot(p_total, main = "Baitfish - large")
 
 
-
-area <- 265
-obs.table <- cbind(rep(1, nrow(total_observations)), total_observations$Trial, total_observations)
-colnames(obs.table)[1:2] <- c("Region.Label", "Sample.Label")
-
-region.table <- data.frame(matrix(c(1, area), ncol = 2, byrow = T))
-colnames(region.table) <- c("Region.Label", "Area")
-
-sample.table <- data.frame(cbind(rep(1, length(unique(total_observations$Trial))), unique(total_observations$Trial), rep(265, length(unique(total_observations$Trial)))))
-colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
-
-d <- dht(p_total, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
-         options = list(convert.units = 0.001))
+d <- calcAbundanceSingle(265, total_observations, p_total)
 d
 
 
@@ -274,7 +286,7 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
 
 #Robbins et al found 17.1% of shark analogues were seen from a helicopter
 
-est <- 0.5 #abundance estimate for 300m S transect
+est <- 0.5 #uncorrected abundance estimate for 300m S transect
 adjusted <- est/0.171
 
 
@@ -283,10 +295,9 @@ adjusted <- est/0.171
 #Gazo et al 2004 found that mean proportion of time that a bottlenose dolphin pod
 #spent at the surface was 0.77. 23% of pods are underwater and unavailable for sampling
 #149 groups seen with average group size = 16.1
+#adjusted probability of detection = 0.3 (0.32*0.93)
 
-(149/0.77)/(265*47*0.30)*16.1*265
-
-
+adjusted <- (149/0.77)/(265*47*0.30)*16.1*265
 
 
 
