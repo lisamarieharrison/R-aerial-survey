@@ -146,6 +146,7 @@ for (s in c("B", "BOT", "S")) {
 
 #remove single "LT" or "RT" or times will be incorrect
 dat.south <- dat.south[!dat.south$Time == "", ]
+dat.south[, c("Beaufort.Sea.State", "Water.clarity")] <- apply(dat.south[, c("Beaufort.Sea.State", "Water.clarity")], 2, as.integer)
 test <- dat.south$Type[dat.south$Type %in% c("LT", "RT")]
 for (i in 2:length(test)) {
   if ((test[i] == "LT" & test[i - 1] == "LT") | (test[i] == "RT" & test[i - 1] == "RT")) {
@@ -201,7 +202,7 @@ for (i in unique(dat.south$Date)) {
       }
       
       #add minute differences to each environmental level
-      for (k in c(22, 25, 26, 28)) {
+      for (k in c(23, 26, 27, 29)) {
         w <- which(colnames(envt.var.south) == as.name(paste(names(dat.south)[k], ".south.", dat.south[dat.south$Date == i, ][j, k], sep = "")))
         envt.var.south[1, w] <- envt.var.south[1, w] + mins
       }
@@ -235,10 +236,10 @@ sightingsAtLevel <- function(environmenal_hrs, dat, env_variable, species, fligh
 }
 
 #sea state table
-sightingsAtLevel(environmenal_hrs = envt.var.south, dat = lisa_obs, env_variable = "Beaufort.Sea.State", species = "B", flight_direction = "S")
+sightingsAtLevel(environmenal_hrs = envt.var.south, dat = dat.south, env_variable = "Beaufort.Sea.State", species = "S", flight_direction = "S")
 
 #turbidity table
-sightingsAtLevel(environmenal_hrs = envt.var.south, dat = lisa_obs, env_variable = "Water.clarity", species = "B", flight_direction = "S")
+sightingsAtLevel(environmenal_hrs = envt.var.south, dat = dat.south, env_variable = "Water.clarity", species = "S", flight_direction = "S")
 
 
 createTab <- function(species, dat, flight_direction, env_variable, env_dat=NULL) {
@@ -328,7 +329,7 @@ ggplot(a, aes(x = x,y = y, fill = Species, col = Species)) +
 
 #Robbins et al found 17.1% of shark analogues were seen from a helicopter
 
-est <- 0.5 #uncorrected abundance estimate for 300m S transect
+est <- 2.4 #uncorrected abundance estimate for 1000m S transect
 adjusted <- est/0.171
 
 
@@ -339,7 +340,7 @@ adjusted <- est/0.171
 #149 groups seen with average group size = 16.1
 #adjusted probability of detection = 0.3 (0.32*0.93)
 
-adjusted <- (149/0.77)/(265*47*0.30)*16.1*265
+adjusted <- (173/0.77)/(265*54*0.76*0.32)*16.1*265
 
 
 
