@@ -114,6 +114,29 @@ d <- calcAbundanceSingle(265*strip_width/1000, total_observations, p_total)
 d
 
 
+#plots of detection probability for each species (300m strip width)
+for (s in c("B", "BOT", "S")) {
+  par(mfrow = c(1, 2))
+  
+  for (d in c("N", "S")) {
+    
+    total_observations <- createData(species = s, cor_obs, truncate = strip_width, direction = d)
+    
+    p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), 
+                   data = total_observations, meta.data = list(left = 50, width = 300))
+    summary(p_total)
+    
+    #species and flight direction hash tables
+    species_tab <- matrix(c("B", "BOT", "S", "Baitfish", "Bottlenose dolphins", "Sharks"), ncol = 2)
+    dir_tab <- matrix(c("N", "S", "North", "South"), ncol = 2)
+    
+    plot(p_total, main = , cex.axis = 2, cex.lab = 2)
+    title(paste(species_tab[which(species_tab[, 1] == s), 2], ": ", dir_tab[which(dir_tab[, 1] == d), 2], sep = ""), 
+          cex.main = 3)
+    
+  }
+}
+
 
 
 
