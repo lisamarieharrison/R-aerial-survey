@@ -4,6 +4,7 @@
 
 setwd("C:/Users/Lisa/Documents/phd/aerial survey/R/data")
 lisa_obs <- read.csv("lisa_full_observations.csv", header = T)
+vic_obs  <- read.csv("vic_extra_observations.csv", header = T)
 library(mrds)
 library(chron)
 library(knitr)
@@ -12,14 +13,28 @@ library(ggplot2)
 #source mrds code modified to use only single sided strip width
 source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/mrds_modified_functions.R")
 
-table(lisa_obs$Species)
-
-#total sightings
-table(lisa_obs$Flight.Direction, lisa_obs$Species)
+#merge lisa and vic's observations to get all sightings
+all_obs <- rbind(lisa_obs, vic_obs)
+table(all_obs$Flight.Direction, all_obs$Species)
 
 #combine all shark species into a single category, except hammerheads
 lisa_obs$Species[lisa_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
+vic_obs$Species[vic_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
 
+for (t in unique(vic_obs$Trial)) {
+  for (s in c("B", "BOT", "S")) {
+    cor_factor <- percent_of_lisa[which(names(percent_of_lisa) == s)]
+    n_rows <- nrow(vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ])
+    n_rep <- abs(n_rows - round(n_rows / cor_factor))
+    rep_row <- vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ][1, ]
+    rep_row$Dist..from.transect <- mean(na.omit(vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ]$Dist..from.transect))
+    for (i in 1:n_rep) {
+      vic_obs <- rbind(vic_obs, rep_row)
+    }
+  }
+}
+
+cor_obs <- rbind(lisa_obs, vic_obs)
 
 #---------------------------- DETECTION FUNCTIONS -----------------------------#
 
@@ -48,6 +63,9 @@ createData <- function(species, lisa_obs, direction, truncate=NULL) {
   total_observations <- data.frame(total_observations)
   colnames(total_observations) <- c("object", "observer", "detected", "distance", "species", "Trial", "size")
 
+  total_observations <- apply(total_observations, 2, as.character)
+  total_observations <- data.frame(apply(total_observations, 2, as.numeric))
+  
   if (species == "BOT") {
     total_observations <- total_observations[!is.na(total_observations$size), ]
   } else {
@@ -71,7 +89,7 @@ calcAbundanceSingle <- function(area, dataframe, model) {
   region.table <- data.frame(matrix(c(1, area), ncol = 2, byrow = T))
   colnames(region.table) <- c("Region.Label", "Area")
   
-  sample.table <- data.frame(cbind(rep(1, 47), c(1:47), rep(265, 47)))
+  sample.table <- data.frame(cbind(rep(1, 54), c(1:54), rep(265, 54)))
   colnames(sample.table) <- c("Region.Label", "Sample.Label", "Effort")
   
   d <- dht(model, region.table = region.table, sample.table = sample.table, obs.table = obs.table, 
@@ -81,16 +99,18 @@ calcAbundanceSingle <- function(area, dataframe, model) {
   
 }
 
-total_observations <- createData(species = "S", lisa_obs, truncate = 1000, direction = "S")
+strip_width <- 1000
+
+total_observations <- createData(species = "S", cor_obs, truncate = strip_width, direction = "S")
 
 p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), 
-               data = total_observations, meta.data = list(left = 50, width = 1000))
+               data = total_observations, meta.data = list(left = 50, width = strip_width))
 summary(p_total)
 #ddf.gof(p_total, main="Total observations goodness of fit")
 #plot(p_total, main = "Baitfish - large")
 
 
-d <- calcAbundanceSingle(265, total_observations, p_total)
+d <- calcAbundanceSingle(265*strip_width/1000, total_observations, p_total)
 d
 
 
