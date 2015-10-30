@@ -9,6 +9,8 @@ library(mrds)
 library(chron)
 library(knitr)
 library(ggplot2)
+library(reshape2)
+library(gridExtra)
 
 #source mrds code modified to use only single sided strip width
 source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/mrds_modified_functions.R")
@@ -16,6 +18,8 @@ source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/mrds_mo
 #merge lisa and vic's observations to get all sightings
 all_obs <- rbind(lisa_obs, vic_obs)
 table(all_obs$Flight.Direction, all_obs$Species)
+
+season <- rbind(lisa_obs, vic_obs)
 
 #combine all shark species into a single category, except hammerheads
 lisa_obs$Species[lisa_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
@@ -202,7 +206,7 @@ for (i in unique(dat.south$Date)) {
       }
       
       #add minute differences to each environmental level
-      for (k in c(23, 26, 27, 29)) {
+      for (k in c(24, 27, 28, 30)) {
         w <- which(colnames(envt.var.south) == as.name(paste(names(dat.south)[k], ".south.", dat.south[dat.south$Date == i, ][j, k], sep = "")))
         envt.var.south[1, w] <- envt.var.south[1, w] + mins
       }
@@ -337,10 +341,44 @@ adjusted <- est/0.171
 
 #Gazo et al 2004 found that mean proportion of time that a bottlenose dolphin pod
 #spent at the surface was 0.77. 23% of pods are underwater and unavailable for sampling
-#149 groups seen with average group size = 16.1
-#adjusted probability of detection = 0.3 (0.32*0.93)
+#173 groups seen with average group size = 16.1
 
 adjusted <- (173/0.77)/(265*54*0.76*0.32)*16.1*265
+
+
+#--------------------------SEASONAL DIFFERENCES--------------------------------#
+
+#number of surveys per season
+surveys_per_season <- colSums(table(season$Trial, season$Season) > 0)*2
+round(table(season$Season, season$Species)/surveys_per_season, 1)
+
+#boxplots of main species by season
+for (s in c("B", "BOT", "S")) {
+  
+  season_tab <- table(season$Season[season$Species == s], season$Trial[season$Species == s])
+  season_tab[season_tab == 0] <- NA
+  
+  #species hash table
+  species_hash <- matrix(c("B", "BOT", "S", "Baitfish", "Bottlenose dolphins", "Sharks", "Sightings per survey", "", ""), ncol = 3)
+  
+  assign(paste("p", which(species_hash[, 1] == s), sep=""), 
+    ggplot(data = melt(t(season_tab)), aes(x=Var2, y=value)) + geom_boxplot(aes(fill=Var2), alpha = 0.5) + 
+    xlab("") + 
+    ylab(species_hash[which(species_hash[, 1] == s), 3]) + 
+    scale_y_continuous(limits = c(0, 80)) +
+    scale_fill_manual(name = "Season", values = c("red", "blue", "yellow")) + 
+    ggtitle(paste(species_hash[which(species_hash[, 1] == s), 2])) +
+    theme(plot.title = element_text(lineheight = 1, face="bold", size = 30), axis.text = element_text(size = 25),
+          legend.position="none", axis.title = element_text(size = 25)))
+  
+}
+
+plot_list <- list(p1, p2, p3)
+do.call(grid.arrange, c(plot_list, list(ncol = 3))) #plot 3 plots next to each other
+
+
+
+
 
 
 
