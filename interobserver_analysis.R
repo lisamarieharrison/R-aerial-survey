@@ -84,9 +84,6 @@ par(mfrow = c(1, 2))
 hist(table(total_missed$Observer, total_missed$Date)[1, ], main = "Vic missed", xlab = "", xlim = c(0, 35), col = "lightgrey")
 hist(table(total_missed$Observer, total_missed$Date)[2, ], main = "Lisa missed", xlab = "", xlim = c(0, 35), col = "lightgrey")
 
-  
-
-
 #missed sightings by date
 total_missed$Date <- chron(dates. = as.character(total_missed$Date), format = "d/m/y")
 par(mfrow = c(1, 1))
@@ -97,6 +94,17 @@ legend("topleft", c("Vic", "Lisa"), col = c("black", "red"), lwd = 2, bty = "n",
 axis(side = 1, at = 1:22, colnames(table(total_missed$Observer, total_missed$Date)))
 title("Missed sightings by date")
 
+#total number of sightings by each observer
+
+lisa_missed$Species[lisa_missed$Species %in% c("BS", "W", "Wh", "S")] <- "S"
+overlap$Species[overlap$Species %in% c("BS", "W", "Wh", "S")] <- "S"
+vic_missed$Species[vic_missed$Species %in% c("BS", "W", "Wh", "S")] <- "S"
+
+vic_seen  <- table(lisa_missed$Species) + table(overlap$Species)
+lisa_seen <- table(vic_missed$Species) + table(overlap$Species)
+
+#vic percentage of Lisa
+percent_of_lisa <- vic_seen/lisa_seen
 
 #---------------------------- DETECTION FUNCTIONS -----------------------------#
 
