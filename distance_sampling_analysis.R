@@ -21,15 +21,19 @@ table(all_obs$Flight.Direction, all_obs$Species)
 lisa_obs$Species[lisa_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
 vic_obs$Species[vic_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
 
+dat.south <- rbind(lisa_obs[lisa_obs$Flight.Direction == "S", ], vic_obs[vic_obs$Flight.Direction == "S", ])
+
 for (t in unique(vic_obs$Trial)) {
   for (s in c("B", "BOT", "S")) {
     cor_factor <- percent_of_lisa[which(names(percent_of_lisa) == s)]
     n_rows <- nrow(vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ])
-    n_rep <- abs(n_rows - round(n_rows / cor_factor))
-    rep_row <- vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ][1, ]
-    rep_row$Dist..from.transect <- mean(na.omit(vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ]$Dist..from.transect))
-    for (i in 1:n_rep) {
-      vic_obs <- rbind(vic_obs, rep_row)
+    if (n_rows != 0) {
+      n_rep <- abs(n_rows - round(n_rows / cor_factor))
+      rep_row <- vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ][1, ]
+      rep_row$Dist..from.transect <- mean(na.omit(vic_obs[vic_obs$Trial == t & vic_obs$Species == s, ]$Dist..from.transect))
+      for (i in 1:n_rep) {
+        vic_obs <- rbind(vic_obs, rep_row)
+      }
     }
   }
 }
@@ -107,8 +111,6 @@ p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1),
                data = total_observations, meta.data = list(left = 50, width = strip_width))
 summary(p_total)
 #ddf.gof(p_total, main="Total observations goodness of fit")
-#plot(p_total, main = "Baitfish - large")
-
 
 d <- calcAbundanceSingle(265*strip_width/1000, total_observations, p_total)
 d
@@ -143,6 +145,7 @@ for (s in c("B", "BOT", "S")) {
 #-------------------------- Environmental variables ---------------------------#
 
 #remove single "LT" or "RT" or times will be incorrect
+dat.south <- dat.south[!dat.south$Time == "", ]
 test <- dat.south$Type[dat.south$Type %in% c("LT", "RT")]
 for (i in 2:length(test)) {
   if ((test[i] == "LT" & test[i - 1] == "LT") | (test[i] == "RT" & test[i - 1] == "RT")) {
@@ -181,10 +184,6 @@ colnames(envt.var.south) <- c(
   "Glare.south.60",
   "Glare.south.100"
 )
-
-
-dat.south <- lisa_obs[lisa_obs$Flight.Direction == "S", ]
-dat.south <- dat.south[!dat.south$Time == "", ]
 
 #sighting effort for southbound data
 for (i in unique(dat.south$Date)) {
