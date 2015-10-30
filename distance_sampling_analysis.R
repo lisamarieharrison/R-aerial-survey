@@ -20,6 +20,7 @@ all_obs <- rbind(lisa_obs, vic_obs)
 table(all_obs$Flight.Direction, all_obs$Species)
 
 season <- rbind(lisa_obs, vic_obs)
+annual <- season
 
 #combine all shark species into a single category, except hammerheads
 lisa_obs$Species[lisa_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
@@ -349,13 +350,16 @@ adjusted <- (173/0.77)/(265*54*0.76*0.32)*16.1*265
 #--------------------------SEASONAL DIFFERENCES--------------------------------#
 
 #number of surveys per season
-surveys_per_season <- colSums(table(season$Trial, season$Season) > 0)*2
-round(table(season$Season, season$Species)/surveys_per_season, 1)
+surveys_per_season <- colSums(table(season$Trial, substr(season$Season, 1, 6)) > 0)*2
+round(table(substr(season$Season, 1, 6), season$Species)/surveys_per_season, 1)
+
+#combine all shark species into one category for plotting
+season$Species[season$Species %in% c("BS", "W", "Wh", "S")] <- "S"
 
 #boxplots of main species by season
 for (s in c("B", "BOT", "S")) {
   
-  season_tab <- table(season$Season[season$Species == s], season$Trial[season$Species == s])
+  season_tab <- table(substr(season$Season, 1, 6)[season$Species == s], season$Trial[season$Species == s])
   season_tab[season_tab == 0] <- NA
   
   #species hash table
@@ -375,6 +379,36 @@ for (s in c("B", "BOT", "S")) {
 
 plot_list <- list(p1, p2, p3)
 do.call(grid.arrange, c(plot_list, list(ncol = 3))) #plot 3 plots next to each other
+
+
+#----------------------------ANNUAL DIFFERENCES--------------------------------#
+
+surveys_per_season <- colSums(table(season$Trial, season$Season) > 0)*2
+round(table(season$Season, season$Species)/surveys_per_season, 1)
+
+for (s in c("B", "BOT", "S")) { 
+  
+  season_tab <- table(cor_obs$Season[cor_obs$Species == s], cor_obs$Trial[cor_obs$Species == s])
+  season_tab[season_tab == 0] <- NA
+  
+  #species hash table
+  species_hash <- matrix(c("B", "BOT", "S", "Baitfish", "Bottlenose dolphins", "Sharks"), ncol = 2)
+  
+  print(ggplot(data = melt(t(season_tab)), aes(x=Var2, y=value)) + geom_boxplot(aes(fill=Var2), alpha = 0.5) + 
+    xlab("") + 
+    ylab("Sightings per survey") + 
+    scale_fill_manual(name = "Season", values = rep(c("red", "blue", "yellow"), each = 2)) + 
+    ggtitle(paste(species_hash[which(species_hash[, 1] == s), 2])) +
+    theme(plot.title = element_text(lineheight = 1, face="bold", size = 30), axis.text = element_text(size = 25),
+          legend.position="none", axis.title = element_text(size = 25)))
+  
+}
+
+
+
+
+
+
 
 
 
