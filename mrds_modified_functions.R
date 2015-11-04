@@ -689,7 +689,7 @@ dht.se <- function(model, region.table, samples, obs, options, numRegions,
   estimate.table$ucl[is.nan(estimate.table$ucl)] <- 0
   estimate.table$k  <-  NULL
   
-  print(c(vc, vc1, vc2))
+  message(paste(vc, vc1, vc2))
   
   return(list(estimate.table = estimate.table,
               vc             = vc,
