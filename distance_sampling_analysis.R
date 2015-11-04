@@ -11,6 +11,7 @@ library(knitr)
 library(ggplot2)
 library(reshape2)
 library(gridExtra)
+library(RUnit)
 
 #source mrds code modified to use only single sided strip width
 source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/mrds_modified_functions.R")
@@ -401,11 +402,19 @@ for (s in c("B", "BOT", "S")) {
     ggtitle(paste(species_hash[which(species_hash[, 1] == s), 2])) +
     theme(plot.title = element_text(lineheight = 1, face="bold", size = 30), axis.text = element_text(size = 25),
           legend.position="none", axis.title = element_text(size = 25)))
-  
+
 }
 
 
+#------------------------------- UNIT TESTING ---------------------------------#
 
+test.suite <- defineTestSuite("example",
+                              dirs = file.path("C:/Users/Lisa/Documents/phd/aerial survey/R/code/tests"),
+                              testFileRegexp = 'test_distance_sampling_analysis')
+
+test.result <- runTestSuite(test.suite)
+
+printTextProtocol(test.result)
 
 
 
