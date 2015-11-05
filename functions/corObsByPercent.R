@@ -9,7 +9,7 @@ corObsByPercent <- function(dat, percent_mat) {
  
   for (t in unique(dat$Trial)) {
     for (s in c("B", "BOT", "S")) {
-      cor_factor <- percent_mat[which(percent_mat[, 1] == s), 2]
+      cor_factor <- percent_mat[which(names(percent_mat) == s)]
       n_rows <- nrow(dat[dat$Trial == t & dat$Species == s, ])
       if (n_rows != 0) {
         n_rep <- abs(n_rows - round(n_rows / cor_factor))
