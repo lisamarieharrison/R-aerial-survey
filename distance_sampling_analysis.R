@@ -32,12 +32,14 @@ season <- rbind(lisa_obs, vic_obs)
 annual <- season
 
 #combine all shark species into a single category, except hammerheads
-lisa_obs$Species[lisa_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
-vic_obs$Species[vic_obs$Species %in% c("BS", "W", "Wh", "S")] <- "S"
+lisa_obs <- poolAllSharks(lisa_obs)
+vic_obs  <- poolAllSharks(vic_obs)
 
 dat.south <- rbind(lisa_obs[lisa_obs$Flight.Direction == "S", ], vic_obs[vic_obs$Flight.Direction == "S", ])
 
 #correct vics number of sightings using percentage of obs seen by lisa
+source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/percentOfLisa.R")
+percent_of_lisa <- percentOfLisa()
 vic_obs <- corObsByPercent(dat = vic_obs, percent_mat = percent_of_lisa) 
 
 #combine lisa and vics observations to get all corrected observations
@@ -255,24 +257,6 @@ for (s in c("B", "BOT", "S")) {
           legend.position="none", axis.title = element_text(size = 25)))
 
 }
-
-
-#------------------------------- UNIT TESTING ---------------------------------#
-
-test.suite <- defineTestSuite("example",
-                              dirs = file.path("C:/Users/Lisa/Documents/phd/aerial survey/R/code/tests"),
-                              testFileRegexp = 'test_distance_sampling_analysis')
-
-test.result <- runTestSuite(test.suite)
-
-printTextProtocol(test.result)
-
-
-
-
-
-
-
 
 
 
