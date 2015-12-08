@@ -18,6 +18,7 @@ library(ggplot2)
 library(reshape2)
 library(gridExtra)
 
+#source other required functions
 file_list <- c("mrds_modified_functions.R", 
                "calcAbundanceSingle.R",
                "sightingsAtLevel.R",
@@ -25,8 +26,6 @@ file_list <- c("mrds_modified_functions.R",
                "corObsByPercent.R",
                "calcEnvtEffort.R")
 
-
-#source other required functions
 for (f in file_list) {
   source(paste("R-aerial-survey/functions/", f, sep =""))
 }
