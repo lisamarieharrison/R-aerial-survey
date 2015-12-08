@@ -2,7 +2,13 @@
 #author: Lisa-Marie Harrison
 #date: 22/10/2015
 
-setwd("C:/Users/Lisa/Documents/phd/aerial survey/R/data")
+if (Sys.info()[4] == "SCI-6246") {
+  setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/R/data")
+} else {
+  setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/R/data")
+}
+
+
 lisa_obs <- read.csv("lisa_full_observations.csv", header = T)
 vic_obs  <- read.csv("vic_extra_observations.csv", header = T)
 library(mrds)
