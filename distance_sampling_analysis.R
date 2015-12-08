@@ -3,32 +3,33 @@
 #date: 22/10/2015
 
 if (Sys.info()[4] == "SCI-6246") {
-  setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/R/data")
+  setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/R")
 } else {
-  setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/R/data")
+  setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/R")
 }
 
 
-lisa_obs <- read.csv("lisa_full_observations.csv", header = T)
-vic_obs  <- read.csv("vic_extra_observations.csv", header = T)
+lisa_obs <- read.csv("data/lisa_full_observations.csv", header = T)
+vic_obs  <- read.csv("data/vic_extra_observations.csv", header = T)
 library(mrds)
 library(chron)
 library(knitr)
 library(ggplot2)
 library(reshape2)
 library(gridExtra)
-library(RUnit)
 
-#source mrds code modified to use only single sided strip width
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/mrds_modified_functions.R")
+file_list <- c("mrds_modified_functions.R", 
+               "calcAbundanceSingle.R",
+               "sightingsAtLevel.R",
+               "createDistanceData.R",
+               "corObsByPercent.R",
+               "calcEnvtEffort.R")
+
 
 #source other required functions
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/functions/calcAbundanceSingle.R")
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/functions/sightingsAtLevel.R")
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/functions/createDistanceData.R")
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/functions/corObsByPercent.R")
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/functions/calcEnvtEffort.R")
-
+for (f in file_list) {
+  source(paste("R-aerial-survey/functions/", f, sep =""))
+}
 
 #merge lisa and vic's observations to get all sightings
 all_obs <- rbind(lisa_obs, vic_obs)
