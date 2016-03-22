@@ -2,3 +2,5 @@
 *.gz
 *.pdf
 *.log
+.Rproj.user
+R-aerial-survey.Rproj
