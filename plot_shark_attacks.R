@@ -1,3 +1,6 @@
+# plot shark attack locations around australia
+# author: Lisa-Marie Harrison
+
 setwd("C:/Users/43439535/Documents/Lisa/phd/aerial survey/data/speed trials")
 
 lisa  <- read.csv("speed_trials_datasheet_lisa.csv", header = T, skip = 1)
