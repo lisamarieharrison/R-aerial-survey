@@ -54,7 +54,8 @@ calcEnvtEffort <- function(dat) {
         }
         
         #add minute differences to each environmental level
-        for (k in c(24, 27, 28, 30)) {
+        cols <- which(colnames(dat) %in% c("Beaufort.Sea.State", "Cloud.cover", "Water.clarity", "Glare"))
+        for (k in cols) {
           w <- which(colnames(envt.var.south) == as.name(paste(names(dat)[k], ".south.", dat[dat$Date == i, ][j, k], sep = "")))
           envt.var.south[1, w] <- envt.var.south[1, w] + mins
         }
