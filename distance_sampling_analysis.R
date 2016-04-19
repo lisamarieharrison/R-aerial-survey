@@ -18,13 +18,19 @@ library(ggplot2)
 library(reshape2)
 library(gridExtra)
 
+#add a unique trial number to each day
+date_levels <- as.numeric(as.factor(c(as.character(lisa_obs$Date), as.character(vic_obs$Date))))
+lisa_obs$Trial <- date_levels[1:nrow(lisa_obs)]
+vic_obs$Trial <- date_levels[(1 + nrow(lisa_obs)):(nrow(vic_obs) + (nrow(lisa_obs)))]
+
 #source other required functions
 file_list <- c("mrds_modified_functions.R", 
                "calcAbundanceSingle.R",
                "sightingsAtLevel.R",
                "createDistanceData.R",
                "corObsByPercent.R",
-               "calcEnvtEffort.R")
+               "calcEnvtEffort.R",
+               "correctLTRT.R")
 
 for (f in file_list) {
   source(paste("R-aerial-survey/functions/", f, sep =""))
@@ -37,6 +43,14 @@ table(all_obs$Flight.Direction, all_obs$Species)
 season <- rbind(lisa_obs, vic_obs)
 annual <- season
 
+poolAllSharks <- function(x) {
+  
+  x$Species[x$Species %in% c("W", "S", "Wh", "BS")] <- "S"
+  
+  return(x)
+  
+}
+
 #combine all shark species into a single category, except hammerheads
 lisa_obs <- poolAllSharks(lisa_obs)
 vic_obs  <- poolAllSharks(vic_obs)
@@ -44,7 +58,7 @@ vic_obs  <- poolAllSharks(vic_obs)
 dat.south <- rbind(lisa_obs[lisa_obs$Flight.Direction == "S", ], vic_obs[vic_obs$Flight.Direction == "S", ])
 
 #correct vics number of sightings using percentage of obs seen by lisa
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/percentOfLisa.R")
+source("~/Lisa/phd/aerial survey/R/R-aerial-survey/percentOfLisa.R")
 percent_of_lisa <- percentOfLisa()
 vic_obs <- corObsByPercent(dat = vic_obs, percent_mat = percent_of_lisa) 
 
@@ -54,16 +68,6 @@ cor_obs <- rbind(lisa_obs, vic_obs)
 #---------------------------- DETECTION FUNCTIONS -----------------------------#
 
 strip_width <- 1000
-
-total_observations <- createDistanceData(species = "B", cor_obs, truncate = strip_width, direction = "S")
-
-p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), 
-               data = total_observations, meta.data = list(left = 50, width = strip_width))
-summary(p_total)
-#ddf.gof(p_total, main="Total observations goodness of fit")
-
-d <- calcAbundanceSingle(265*strip_width/1000, total_observations, p_total)
-d
 
 
 #plots of detection probability for each species (300m strip width)
@@ -89,8 +93,21 @@ for (s in c("B", "BOT", "S")) {
   }
 }
 
+#abundance calculator
 
-
+for (s in c("B", "BOT", "S")) {
+  
+  total_observations <- createDistanceData(species = s, cor_obs, truncate = strip_width, direction = "S")
+  
+  p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), 
+                 data = total_observations, meta.data = list(left = 50, width = strip_width))
+  print(summary(p_total))
+  #ddf.gof(p_total, main="Total observations goodness of fit")
+  
+  d <- calcAbundanceSingle(265*strip_width/1000, total_observations, p_total)
+  print(d)
+  
+}
 
 #-------------------------- Environmental variables ---------------------------#
 
@@ -257,7 +274,7 @@ for (s in c("B", "BOT", "S")) {
   print(ggplot(data = melt(t(season_tab)), aes(x=Var2, y=value)) + geom_boxplot(aes(fill=Var2), alpha = 0.5) + 
     xlab("") + 
     ylab("Sightings per survey") + 
-    scale_fill_manual(name = "Season", values = rep(c("red", "blue", "yellow"), each = 2)) + 
+    scale_fill_manual(name = "Season", values = c("red", "blue", "yellow")) + 
     ggtitle(paste(species_hash[which(species_hash[, 1] == s), 2])) +
     theme(plot.title = element_text(lineheight = 1, face="bold", size = 30), axis.text = element_text(size = 25),
           legend.position="none", axis.title = element_text(size = 25)))
