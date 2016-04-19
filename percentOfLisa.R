@@ -2,16 +2,16 @@ percentOfLisa <- function() {
   
   #calculate the percentage of lisa's observations that Vic saw
   
-  dat <- read.csv("C:/Users/Lisa/Documents/phd/aerial survey/R/data/interobserver_20151105.csv", header = T)
+  dat <- read.csv("~/Lisa/phd/aerial survey/R/data/interobserver_20150407.csv", header = T)
   
   #source required functions
-  source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/functions/checkSameSighting.R")
-  source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/functions/findOverlappingObservations.R")
+  source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/checkSameSighting.R")
+  source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/findOverlappingObservations.R")
   
-  dat <- dat[dat$Type == "S", ]
+  #dat <- dat[dat$Type == "S", ]
   dat <- dat[dat$Species != "", ]
   dat$Species[dat$Species == "B "] <- "B"
-  dat$Species <- factor(dat$Species)
+  dat$Species <- as.factor(dat$Species)
   
   lisa <- dat[dat$Observer == "Lisa", ]
   vic  <- dat[dat$Observer == "Vic", ]
@@ -28,8 +28,7 @@ percentOfLisa <- function() {
   vic_missed  <- poolAllSharks(vic_missed)
   
   lisa_missed <- lisa_missed[lisa_missed$Species %in% levels(overlap$Species), ]
-  lisa_missed$Species <- factor(lisa_missed$Species)
-  
+
   vic_seen  <- table(lisa_missed$Species) + table(overlap$Species)
   lisa_seen <- table(vic_missed$Species) + table(overlap$Species)
   
