@@ -14,8 +14,9 @@ right  = 2.54cm]{geometry}
 \maketitle
 
 <<readData, echo=false>>=
-source("C:/Users/Lisa/Documents/phd/aerial survey/R/code/R-aerial-survey/fun_calculate_envt_effort.R")
-dat <- read.csv("C:/Users/Lisa/Documents/phd/aerial survey/R/data/full_data_set_20150410.csv", header = T)
+
+source("~/Lisa/phd/aerial survey/R/R-aerial-survey/fun_calculate_envt_effort.R")
+dat <- read.csv("~/Lisa/phd/aerial survey/R/data/full_data_set_20151022.csv", header = T)
 library(chron)
 library(stats)
 library(knitr)
@@ -547,7 +548,7 @@ bot_size <- dat[dat$Species == "BOT", ]
 
 png("botGroupSizeSeason.png")
 
-boxplot(bot_size$Number ~ bot_size$Season, ylab = "Pod size", main = "Bottlenose dolphin group size for each sighting")
+boxplot(as.numeric(bot_size$Number) ~ bot_size$Season, ylab = "Pod size", main = "Bottlenose dolphin group size for each sighting")
 
 dev.off()
 
