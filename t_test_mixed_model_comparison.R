@@ -1,6 +1,7 @@
 setwd(dir = "~/Lisa/phd/aerial survey/data/speed trials/completed datasheets")
 dat <- read.csv("Completed_matched_data.csv", header = TRUE)
 library(MASS)
+library(nlme)
 library(piecewiseSEM)
 
 s <- "BOT"
@@ -44,23 +45,6 @@ summary(speed.lm)
 #mixed model with correlation
 speed.lm <- lme(counts ~ speeds, random=~1|day/trial, correlation = corAR1(form=~1|day/trial), data = speed_dat)
 summary(speed.lm)
-
-#glmm
-speed.lm <- glmm(counts ~ speeds, random=~1|trial, family.glmm = poisson.glmm, m = 100, varcomps.names = "trial", data = speed_dat)
-summary(speed.lm)
-
-#glmm with correlation structure
-speed.lm <- glmmPQL(counts ~ speeds, random=~1|day/trial, family = poisson, data = speed_dat, correlation = corAR1(form=~1|day/trial), control = list(msMaxIter = 100))
-summary(speed.lm)
-
-#gamma glmm with correlation structure
-speed.lm <- glmmPQL(counts ~ speeds, random=~1|day/trial, family = Gamma, data = speed_dat, correlation = corAR1(form=~1|day/trial), control = list(msMaxIter = 100))
-summary(speed.lm)
-
-#summary plots for glmmPQL
-preds <- predict(speed.lm, type = "response")
-plot(speed_dat$counts, preds)
-plot(speed.lm, main = "residuals vs fitted")
 
 
 #------------------------------- ALL SPECIES AT ONCE ----------------------------------#
@@ -109,14 +93,3 @@ summary(speed.lm)
 
 #r-squared
 sem.model.fits(speed.lm, aicc = TRUE)
-
-#glmm
-speed.lm <- glmm(counts ~ speeds + observer, random=~1|trial, family.glmm = poisson.glmm, m = 100, varcomps.names = "trial", data = speed_dat[speed_dat$species == "B", ])
-summary(speed.lm)
-
-
-speed.lm <- glmmPQL(counts ~ speeds + observer, random=~1|trial, family = poisson, data = speed_dat[speed_dat$species == "B", ], correlation = corAR1(form=~1|trial), control = list(msMaxIter = 100))
-summary(speed.lm)
-
-
-
