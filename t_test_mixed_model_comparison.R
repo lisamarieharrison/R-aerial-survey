@@ -81,11 +81,14 @@ after  <- speed_dat[speed_dat$speeds == 100 & speed_dat$species == "BOT", 1]
 #paired t test vs mixed model
 t.test(before, after, paired = TRUE)
 
+#one-sample t test for differences in means
+t.test(after - before)
 
 #mixed model with correlation
 speed.lm <- lme(counts ~ species*speeds + observer, random=~1|day/trial, correlation = corAR1(form=~1|day/trial), data = speed_dat)
 summary(speed.lm)
 
+##N.B: All tests above give the same result
 
 #mixed model with correlation
 speed.lm <- lme(counts ~ speeds + observer, random=~1|day/trial, data = speed_dat[speed_dat$species == "B", ])
