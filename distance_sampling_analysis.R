@@ -38,7 +38,7 @@ for (f in file_list) {
 
 #merge lisa and vic's observations to get all sightings
 all_obs <- rbind(lisa_obs, vic_obs)
-table(all_obs$Flight.Direction, all_obs$Species)
+table(all_obs$Flight.Direction[!(all_obs$Species == "")], all_obs$Species[!(all_obs$Species == "")])
 
 season <- rbind(lisa_obs, vic_obs)
 annual <- season
