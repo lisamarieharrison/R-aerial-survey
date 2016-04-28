@@ -47,14 +47,14 @@ calculateEffort <- function(dat) {
   for (i in unique(dat$Date)) {
     for (j in 1:(nrow(dat[dat$Date == i, ]) - 1)) {
       
-      if (dat[dat$Date == i, ]$Type[j] != "LT") {
+      if (!(dat[dat$Date == i, ]$Type[j] %in% c("LT", "EnOn", "EnOff"))) {
         
         time.start <- dat$Time[dat$Date == i][j] 
         time.stop  <- dat$Time[dat$Date == i][j + 1]
         mins <- hours(time.stop - time.start)*60 + minutes(time.stop - time.start)
-        
         #add minute differences to each environmental level
-        for (k in c(23, 25, 26, 27, 29)) {
+        col_include <- c(which(colnames(dat) %in% c("Beaufort.Sea.State", "Wind.speed", "Cloud.cover", "Water.clarity", "Glare")))
+        for (k in col_include) {
           w <- which(colnames(envt.var) == as.name(paste(names(dat)[k], ".", dat[dat$Date == i, ][j, k], sep = "")))
           envt.var[1, w] <- envt.var[1, w] + mins
         }
