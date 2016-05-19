@@ -163,7 +163,7 @@ par(mfrow = c(2, 2))
 
 #Baitfish
 total_observations <- createDistanceData(species = "B", lisa_obs, truncate = 1000, direction = "S")
-det_fun_B <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 1000))
+det_fun_B <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 80, width = 1000))
 plot(det_fun_B, main = "Baitfish")
 
 #Bottlenose dolphins
@@ -278,9 +278,27 @@ total_obs <- total_obs[!is.na(total_obs$distance), ]
 missed_table <- table(total_obs$observer[total_obs$detected == 0], total_obs$Species[total_obs$detected == 0])
 missed_table <- missed_table[, c("B", "BOT", "HH", "S", "R", "T")]
 par(mfrow = c(1, 1), oma = c(0, 0, 0, 0), mar = c(8, 5, 1, 1))
-barplot(missed_table, beside = TRUE, legend = c("Lisa", "Vic"), ylab = "Number of missed sightings", args.legend = list(bty = "n"), xaxt = "n")
+barplot(missed_table, beside = TRUE, legend = c("Observer 1", "Observer 2"), ylab = "Number of missed sightings", args.legend = list(bty = "n"), xaxt = "n")
 text(c(2, 5, 8, 11, 14, 17), y=par()$usr[3]-0.1*100,
      labels=c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "Shark", "Ray", "Turtle"), adj=1, xpd=TRUE, srt = 45)
 
+
+
+
+region.table <- data.frame("Region.Label" = 1, "Area" = 265)
+sample.table <- data.frame("Sample.Label" = 1:46, "Region.Label" = 1, "Effort" = 265)
+obs.table    <- data.frame("object" = 1:nrow(total_observations), "Region.Label" = 1, "Sample.Label" = total_observations$Trial)
+
+det_fun_S <- ds(data = total_observations, truncation = list(left = 50, right = 1000), key = "hr", region.table=region.table, sample.table=sample.table, obs.table=obs.table, convert.units=0.001)
+
+distance.sample.size(cv.pct = 30, N = 100, detection.function = "hazard", theta = c(1.640992, 5.508635), w = 1)
+
+
+p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula =~ 1),
+               data = total_obs[total_obs$Species == "B", ], meta.data = list(left = 50, width = 1000))
+
+
+p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~bs(distance,degree=4)),
+               data = total_obs[total_obs$Species == "B", ], meta.data = list(left = 50, width = 1000))
 
 
