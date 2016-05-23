@@ -294,11 +294,48 @@ det_fun_S <- ds(data = total_observations, truncation = list(left = 50, right = 
 distance.sample.size(cv.pct = 30, N = 100, detection.function = "hazard", theta = c(1.640992, 5.508635), w = 1)
 
 
-p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula =~ 1),
-               data = total_obs[total_obs$Species == "B", ], meta.data = list(left = 50, width = 1000))
 
 
 p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~bs(distance,degree=4)),
-               data = total_obs[total_obs$Species == "B", ], meta.data = list(left = 50, width = 1000))
+               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 1000))
+
+#find apex of ds model
+apex <- mrds:::apex.gamma(p_total$ds$ds$aux$ddfobj)[1] + 50 #need to add 50 because data left truncated
+
+plot(p_total$mr)
+abline(v = apex + 50, col = "red")
+
+
+#from summary.trial.fi
+#substitute apex for 0 to get the p(0) value returned in summary(ddf.obj)
+
+newdat <- p_total$data
+newdat <- newdat[newdat$distance <= p_total$meta.data$width &
+                   newdat$distance >= p_total$meta.data$left, ]
+newdat <- newdat[newdat$observer == 1 & newdat$detected == 1, ]
+
+newdat$distance <- rep(apex,length(newdat$distance))
+
+
+pred.at0 <- predict(p_total$mr,newdat,type="response")[[1]]
+pdot <- p_total$mr$fitted[, 1]
+avgp <- function(model,pdot,...) {return(pdot)}
+n <- length(newdat$distance)/2
+vcov <- solvecov(p_total$mr$hessian)$inv
+average.p <-  length(newdat$distance[newdat$observer == 1 & newdat$detected == 1])/p_total$mr$Nhat
+average.p0.1 <- sum(avgp(p_total$mr,pred.at0)/pdot)
+NCovered = NCovered.trial(p_total$mr$par, p_total$mr)
+var.pbar.list <- prob.se(p_total$mr,avgp,vcov,fittedmodel=NULL)
+se.obj <- calc.se.Np(p_total$mr, avgp, n, average.p)
+Nhatvar.list <- se.obj$Nhatvar.list
+cvN <- se.obj$Nhat.se/p_total$mr$Nhat
+covar <- t(Nhatvar.list$partial) %*% vcov %*% var.pbar.list$partial +
+  var.pbar.list$covar
+var.pbar <- (average.p0.1/p_total$mr$Nhat)^2*(cvN^2 + var.pbar.list$var/average.p0.1^2
+                                - 2*covar/(average.p0.1*p_total$mr$Nhat))
+
+#p(y) where y = apex and corresponding se
+data.frame("average.p0.1" = average.p0.1/p_total$mr$Nhat, "se" = sqrt(var.pbar))
+
 
 
