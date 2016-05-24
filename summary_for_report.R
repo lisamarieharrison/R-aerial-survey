@@ -10,6 +10,7 @@ source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/calcAbundanceAndCVE
 library(chron)
 library(plyr)
 library(mrds)
+library(splines)
 
 #remove duplicated observations
 #dat <- dat[!duplicated(dat), ]
@@ -163,12 +164,12 @@ par(mfrow = c(2, 2))
 
 #Baitfish
 total_observations <- createDistanceData(species = "B", lisa_obs, truncate = 1000, direction = "S")
-det_fun_B <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 80, width = 1000))
+det_fun_B <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 500))
 plot(det_fun_B, main = "Baitfish")
 
 #Bottlenose dolphins
 total_observations <- createDistanceData(species = "BOT", lisa_obs, truncate = 1000, direction = "S")
-det_fun_BOT <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 1000))
+det_fun_BOT <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 500))
 plot(det_fun_BOT, main = "Bottlenose Dolphins")
 
 #Hammerhead
@@ -283,6 +284,65 @@ text(c(2, 5, 8, 11, 14, 17), y=par()$usr[3]-0.1*100,
      labels=c("Baitfish", "Bottlenose Dolphin", "Hammerhead Shark", "Shark", "Ray", "Turtle"), adj=1, xpd=TRUE, srt = 45)
 
 
+#add a unique trial number to each day
+total_obs$Trial <- as.numeric(as.factor(as.character(total_obs$Date)))
+total_obs$count <- 1
+
+interobs_aggregate <- aggregate(count ~ observer + Species + Trial,data = total_obs[total_obs$detected == 0, ], FUN=sum)
+interobs_aggregate$Species[interobs_aggregate$Species %in% c("W", "BS", "Wh")] <- "S"
+interobs_aggregate <- interobs_aggregate[interobs_aggregate$Species %in% c("B", "BOT", "S"), ]
+interobs_aggregate$Species <- factor(interobs_aggregate$Species)
+total_obs$Species[total_obs$Species %in% c("W", "BS", "Wh")] <- "S"
+sightings_per_trial <- table(total_obs$Species[!duplicated(total_obs$object)], total_obs$Trial[!duplicated(total_obs$object)])
+interobs_aggregate$total_observations <- diag(sightings_per_trial[match(interobs_aggregate$Species, rownames(sightings_per_trial)), match(interobs_aggregate$Trial, colnames(sightings_per_trial))])
+
+#add no missed sightings in
+for (species in c("B", "BOT", "S")) {
+  
+    for (observer in 1:2) {
+      
+      missing <- setdiff(1:18, as.numeric(names(table(interobs_aggregate$Trial[interobs_aggregate$Species == species & interobs_aggregate$observer == observer]))))
+      
+      if (length(missing) > 0) {
+        
+        interobs_aggregate <- rbind(interobs_aggregate, cbind("observer" = rep(observer, length(missing)), "Species" = rep(species, length(missing)), "Trial" =  missing, 
+                                                              "count" = rep(0, length(missing)), "total_observations" =  sightings_per_trial[species, missing]))
+        
+      }
+      
+    }
+  
+}
+interobs_aggregate$count <- as.numeric(interobs_aggregate$count)
+interobs_aggregate$total_observations <- as.numeric(interobs_aggregate$total_observations)
+interobs_aggregate$Trial <- as.numeric(interobs_aggregate$Trial)
+
+boxplot(count/total_observations ~ observer + Species, data = interobs_aggregate, ylab = "Proportion of missed sightings per survey", col = c("darkgrey", "lightgrey"), pch = 19, xaxt = "n")
+axis(1, at = 1:6, rep(c(1, 2), 3))
+axis(1, at = c(1.5, 3.5, 5.5), c("Baitfish", "Bottlenose dolphins", "Sharks"), pos = -0.1, line = F, tick = F)
+axis(1, at = 3.5, c("Observer and Species"), pos = -0.2, line = F, tick = F)
+
+
+#learning curve
+
+interobs_aggregate <- interobs_aggregate[order(interobs_aggregate$Trial), ]
+
+species_lookup <- data.frame("Species" = c("B", "BOT", "S"), "Full_name" = c("Baitfish", "Bottlenose dolphins", "Sharks"))
+
+par(mfrow = c(1, 2), oma = c(4, 4, 6, 0), mar = c(1, 1, 2, 1))
+
+for (s in c("B", "BOT")) {
+  
+  plot(interobs_aggregate$Trial[interobs_aggregate$observer == 1 & interobs_aggregate$Species == s], interobs_aggregate$count[interobs_aggregate$observer == 1 & interobs_aggregate$Species == s]/interobs_aggregate$total_observations[interobs_aggregate$observer == 1 & interobs_aggregate$Species == s], type = "l", xlab = "", ylab = "", ylim = c(0, 1), main = species_lookup$Full_name[species_lookup$Species == s])
+  points(interobs_aggregate$Trial[interobs_aggregate$observer == 2 & interobs_aggregate$Species == s], interobs_aggregate$count[interobs_aggregate$observer == 2 & interobs_aggregate$Species == s]/interobs_aggregate$total_observations[interobs_aggregate$observer == 2 & interobs_aggregate$Species == s], type = "l", col = "red")
+  mtext('Trial', side = 1, outer = TRUE, line = 2)
+  mtext('Proportion of missed sightings', side = 2, outer = TRUE, line = 2)
+  
+}
+legend("topright", c("observer 1", "observer 2"), col = c("black", "red"), lwd = 2, bty = "n", cex = 0.75)
+
+
+# distance sampling with gamma detection function
 
 
 region.table <- data.frame("Region.Label" = 1, "Area" = 265)
@@ -332,7 +392,7 @@ cvN <- se.obj$Nhat.se/p_total$mr$Nhat
 covar <- t(Nhatvar.list$partial) %*% vcov %*% var.pbar.list$partial +
   var.pbar.list$covar
 var.pbar <- (average.p0.1/p_total$mr$Nhat)^2*(cvN^2 + var.pbar.list$var/average.p0.1^2
-                                - 2*covar/(average.p0.1*p_total$mr$Nhat))
+                                              - 2*covar/(average.p0.1*p_total$mr$Nhat))
 
 #p(y) where y = apex and corresponding se
 data.frame("average.p0.1" = average.p0.1/p_total$mr$Nhat, "se" = sqrt(var.pbar))
