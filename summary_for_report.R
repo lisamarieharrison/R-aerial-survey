@@ -13,13 +13,15 @@ library(chron)
 library(plyr)
 library(mrds)
 library(splines)
+library(Distance)
 
 dat <- read.csv("aerial_survey_summary_r.csv", header = T)
 
 file_list <- c("fun_calculate_envt_effort.R",
                "functions/createDistanceData.R",
                "/functions/mrds_modified_functions.R",
-               "functions/calcAbundanceAndCVExtraP.R")
+               "functions/calcAbundanceAndCVExtraP.R",
+               "mrds_modified_for_gamma.R")
 
 for (f in file_list) {
   
@@ -216,7 +218,7 @@ calcAbundanceAndCV(det_fun_S, line_length = 265, n_surveys = 47, p_0 = 0.500, p_
 #------------------------------------- INTER-OBSERVER -------------------------------------------------#
 
 
-dat <- read.csv("~/Lisa/phd/aerial survey/R/data/interobserver_20150522.csv", header = T)
+dat <- read.csv("interobserver_20150522.csv", header = T)
 
 
 lisa <- dat[dat$Observer == "Lisa", ]
