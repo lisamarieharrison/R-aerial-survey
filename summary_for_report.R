@@ -207,10 +207,10 @@ plot(det_fun_S, main = "Sharks")
 #abundance calculations
 #using p(0) estimated from interobserver surveys
 
-calcAbundanceAndCV(det_fun_B, line_length = 265, n_surveys = 47, p_0 = 0.678, p_0_cv = 0.038)
+calcAbundanceAndCV(det_fun_B, line_length = 265, n_surveys = 47, p_0 = 0.647, p_0_cv = 0.025)
 
-calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.788, p_0_cv = 0.067)
-calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.788, p_0_cv = 0.067, group = FALSE)
+calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.778, p_0_cv = 0.057)
+calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.778, p_0_cv = 0.057, group = FALSE)
 
 calcAbundanceAndCV(det_fun_S, line_length = 265, n_surveys = 47, p_0 = 0.500, p_0_cv = 0.500)
 
@@ -375,13 +375,15 @@ det_fun_S <- ds(data = total_observations, truncation = list(left = 50, right = 
 distance.sample.size(cv.pct = 30, N = 100, detection.function = "hazard", theta = c(1.640992, 5.508635), w = 1)
 
 
+p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~1),
+               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 500))
 
 
 p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~bs(distance,degree=4)),
-               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 1000))
+               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 500))
 
 #find apex of ds model
-apex <- mrds:::apex.gamma(p_total$ds$ds$aux$ddfobj)[1] + 50 #need to add 50 because data left truncated
+apex <- mrds:::apex.gamma(det_fun_BOT$ds$aux$ddfobj)[1] + 50 #need to add 50 because data left truncated
 
 plot(p_total$mr)
 abline(v = apex + 50, col = "red")
