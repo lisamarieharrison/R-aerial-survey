@@ -2,21 +2,51 @@
 #author: Lisa-Marie Harrison
 #date: 22/04/2016
 
+
 dat <- read.csv("C:/Users/43439535/Documents/Lisa/phd/aerial survey/data/aerial_survey_summary_r.csv", header = T)
 source("~/Lisa/phd/aerial survey/R/R-aerial-survey/fun_calculate_envt_effort.R")
 source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/createDistanceData.R")
 source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/mrds_modified_functions.R")
 source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/calcAbundanceAndCVExtraP.R")
 source("~/Lisa/phd/aerial survey/R/R-aerial-survey/mrds_modified_for_gamma.R")
+
+if (Sys.info()[4] == "SCI-6246") {
+  setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
+  source_location <- "~/Lisa/phd/aerial survey/R/R-aerial-survey/"
+} else {
+  setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/data")
+  source_location <- "~/phd/aerial survey/R/code/R-aerial-survey/"
+}
+
 library(chron)
 library(plyr)
 library(mrds)
 library(splines)
+library(Distance)
+
+dat <- read.csv("aerial_survey_summary_r.csv", header = T)
+
+file_list <- c("fun_calculate_envt_effort.R",
+               "functions/createDistanceData.R",
+               "/functions/mrds_modified_functions.R",
+               "functions/calcAbundanceAndCVExtraP.R",
+               "mrds_modified_for_gamma.R")
+
+for (f in file_list) {
+  
+  source(paste0(source_location, f))
+  
+}
+
 
 #remove duplicated observations
 #dat <- dat[!duplicated(dat), ]
 
+#remove secondary observations
+dat <- dat[!dat$Secondary == "Y", ]
+
 #check number of sightings = 2695
+#getting 2375 
 dim(dat[dat$Type == "S", ])
 
 dat$Count <- NA
@@ -66,7 +96,7 @@ mtext("Distance from transect (m)", side = 2, outer = TRUE, line = 2)
 
 
 #distance offshore
-par(mar = c(6, 5, 1, 1), oma = c(0, 0, 0, 0))
+par(mfrow = c(1, 1), mar = c(6, 5, 1, 1), oma = c(0, 0, 0, 0))
 dat_south_boxplot <- dat[dat$Flight.Direction == "S" & dat$Species %in% c("B", "BOT", "S", "HH", "HB", "R", "T", "P"), ]
 dat_south_boxplot$Species <- factor(dat_south_boxplot$Species)
 boxplot(dat_south_boxplot$Dist..from.transect ~ dat_south_boxplot$Species, ylab = "Distance (m)", ylim = c(50, 1000), xaxt = "n", col = "lightgrey", pch = 19)
@@ -102,7 +132,6 @@ par(mfrow = c(2, 2), mar = c(2, 2, 2, 3))
 sea_state_tab <- table(dat$Beaufort.Sea.State, dat$Season)
 season_totals <- colSums(sea_state_tab)
 weighted_sea_state <- sea_state_tab/rep(season_totals, each = nrow(sea_state_tab))
-weighted_sea_state <- weighted_sea_state[c(2:5), ] #remove sea state 0 because insignificant
 barplot(weighted_sea_state, legend = T, main = "Sea State", args.legend = list(x = ncol(weighted_sea_state) + 1.5, y=1, bty = "n", cex = 0.8))
 
 turbidity_tab <- table(dat$Water.clarity, dat$Season)
@@ -146,7 +175,7 @@ barplot(south_tab_effort, legend = T, main = "Sea State", args.legend = list("to
 
 #turbidity
 south_tab <- table(dat_season_south$Water.clarity, dat_season_south$Species)
-south_tab_effort <- south_tab[, species]/(envt_effort_south[, paste0("Water.clarity.", sort(unique(dat_season_south$Water.clarity)))]/60) 
+south_tab_effort <- south_tab/(envt_effort_south[, paste0("Water.clarity.", sort(unique(dat_season_south$Water.clarity)))]/60) 
 
 barplot(south_tab_effort, main = "Turbidity", legend = T, args.legend = list("topright", bty = "n"), cex.names = 0.8)
 
@@ -187,10 +216,10 @@ plot(det_fun_S, main = "Sharks")
 #abundance calculations
 #using p(0) estimated from interobserver surveys
 
-calcAbundanceAndCV(det_fun_B, line_length = 265, n_surveys = 47, p_0 = 0.678, p_0_cv = 0.038)
+calcAbundanceAndCV(det_fun_B, line_length = 265, n_surveys = 47, p_0 = 0.647, p_0_cv = 0.025)
 
-calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.788, p_0_cv = 0.067)
-calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.788, p_0_cv = 0.067, group = FALSE)
+calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.778, p_0_cv = 0.057)
+calcAbundanceAndCV(det_fun_BOT, line_length = 265, n_surveys = 47, p_0 = 0.778, p_0_cv = 0.057, group = FALSE)
 
 calcAbundanceAndCV(det_fun_S, line_length = 265, n_surveys = 47, p_0 = 0.500, p_0_cv = 0.500)
 
@@ -198,7 +227,7 @@ calcAbundanceAndCV(det_fun_S, line_length = 265, n_surveys = 47, p_0 = 0.500, p_
 #------------------------------------- INTER-OBSERVER -------------------------------------------------#
 
 
-dat <- read.csv("~/Lisa/phd/aerial survey/R/data/interobserver_20150522.csv", header = T)
+dat <- read.csv("interobserver_20150522.csv", header = T)
 
 
 lisa <- dat[dat$Observer == "Lisa", ]
@@ -355,13 +384,15 @@ det_fun_S <- ds(data = total_observations, truncation = list(left = 50, right = 
 distance.sample.size(cv.pct = 30, N = 100, detection.function = "hazard", theta = c(1.640992, 5.508635), w = 1)
 
 
+p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~1),
+               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 500))
 
 
 p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~bs(distance,degree=4)),
-               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 1000))
+               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 500))
 
 #find apex of ds model
-apex <- mrds:::apex.gamma(p_total$ds$ds$aux$ddfobj)[1] + 50 #need to add 50 because data left truncated
+apex <- mrds:::apex.gamma(det_fun_BOT$ds$aux$ddfobj)[1] + 50 #need to add 50 because data left truncated
 
 plot(p_total$mr)
 abline(v = apex + 50, col = "red")
