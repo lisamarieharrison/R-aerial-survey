@@ -1,4 +1,4 @@
-#sightings near nets
+#dolphin sightings around shark nets
 #author: Lisa-Marie Harrison
 #date: 27/06/2016
 
@@ -9,9 +9,12 @@ if (Sys.info()[4] == "SCI-6246") {
   setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/data")
   source_location <- "~/phd/southern ocean/Mixed models/R code/R-functions-southern-ocean/"
 }
+library(sp)
+library(spatstat)
 
-dat  <- read.csv("aerial_survey_summary_r.csv", header = T)
-nets <- read.csv("shark_net_locations.csv", header = T)
+dat  <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
+nets <- read.csv("shark_net_locations.csv", header = T) #coordinates of shark nets
+no_nets <- read.csv("beaches_without_nets.csv", header = T) #coordinates of sandy beaches with no shark net
 
 source_list <- c("deg2rad.R",
        "gcdHF.R")
@@ -24,10 +27,10 @@ dat <- dat[dat$Type == "S", ]
 dat$Lat <- as.numeric(as.character(dat$Lat))
 dat$Long <- as.numeric(as.character(dat$Long))
 dat <- dat[!is.na(dat$Lat), ]
-dat <- dat[dat$Species == "BOT", ]
-
-#check for positive latitudes
 dat$Lat[dat$Lat > 0] <- dat$Lat[dat$Lat > 0]*-1
+
+dat_bot  <- dat[dat$Species == "BOT", ]
+dat_fish <- dat[dat$Species == "B", ]
 
 animals <- NULL
 area    <- NULL
@@ -68,12 +71,12 @@ for (radius in seq(100, 4000, by = 100)) {
   
   radius_around_nets <- radius #m
   
-  at_beach <- matrix(FALSE, nrow = nrow(nets), ncol = nrow(dat))
+  at_beach <- matrix(FALSE, nrow = nrow(nets), ncol = nrow(dat_bot))
   for (i in 1:ncol(at_beach)) {
     
     for (j in 1:nrow(at_beach)) {
       
-      distance <- gcdHF(deg2rad(dat$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
+      distance <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
       
       if (distance < radius_around_nets) {
         
@@ -120,13 +123,13 @@ diag(net_distance) <- NA
 apply(net_distance, 2, min, na.rm = TRUE) #some nets have other nets only 180m away
 
 
-#distance to closest net
-sighting_to_net <- matrix(NA, nrow = nrow(nets), ncol = nrow(dat))
+#distance of each sighting to closest net
+sighting_to_net <- matrix(NA, nrow = nrow(nets), ncol = nrow(dat_bot))
 for (j in 1:nrow(nets)) {
   
-  for (i in 1:nrow(dat)) {
+  for (i in 1:nrow(dat_bot)) {
     
-    sighting_to_net[j, i] <- gcdHF(deg2rad(dat$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
+    sighting_to_net[j, i] <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
     
   }
   
@@ -134,17 +137,18 @@ for (j in 1:nrow(nets)) {
 hist(apply(sighting_to_net, 2, min, na.rm = TRUE), xlab = "min distance to net (m)")
 
 
+#spatial analysis of dolphins and nets
 
-library(sp)
 
-
-marked_points <- data.frame("longitude" = dat$Long, "latitude" = dat$Lat, "mark" = "sighting")
+marked_points <- data.frame("longitude" = dat_bot$Long, "latitude" = dat_bot$Lat, "mark" = "dolphin")
+marked_points <- rbind(marked_points, data.frame("longitude" = dat_fish$Long, "latitude" = dat_fish$Lat, "mark" = "fish"))
 marked_points <- rbind(marked_points, data.frame("longitude" = nets$longitude, "latitude" = nets$latitude, "mark" = "net"))
+marked_points <- rbind(marked_points, data.frame("longitude" = no_nets$longitude, "latitude" = no_nets$latitude, "mark" = "no_net"))
 
 #convert to utm so units are in m
 xy = data.frame(marked_points$longitude, marked_points$latitude)
 colnames(coordinates(xy)) <- c("lon", "lat")
-proj4string(xy) <- CRS("+proj=longlat +datum=WGS84")
+proj4string(xy) <- CRS("+proj=longlat +dat_botum=WGS84")
 marked_points[, 1:2] <- coordinates(spTransform(xy, CRS("+proj=utm +zone=53 ellps=WGS84")))
 
 
@@ -154,28 +158,62 @@ marked_points$longitude <- mean(marked_points$longitude)
 point_network <- lpp(X = marked_points, L = transect_line) #check duplicated values
 
 #linear K cross
-K <- linearKcross(point_network, "net", "sighting")
+K <- linearKcross(point_network, "net", "dolphin")
 plot(K)
 
 #pair correlation function
-pair_correlation <- linearpcfcross(point_network, "net", "sighting")
+pair_correlation <- linearpcfcross(point_network, "net", "dolphin")
+plot(pair_correlation) #cut off at 8 km because the largest gap between nets is 8km
+
+
+#adding sandy beaches without shark nets
+K <- linearKcross(point_network, "no_net", "dolphin")
+plot(K)
+
+pair_correlation <- linearpcfcross(point_network, "no_net", "dolphin")
 plot(pair_correlation, xlim = c(0, 8000)) #cut off at 8 km because the largest gap between nets is 8km
 
 
-#same analysis on sandy beaches
+
+#dolphin fish school correlation
+pair_correlation <- linearpcfcross(point_network, "fish", "dolphin")
+plot(pair_correlation) #cut off at 8 km because the largest gap between nets is 8km
 
 
+#is a sighting closer to a netted beach or non-netted beach
 
+closest_to_netted <- NULL
+for (i in 1:nrow(dat_bot)) {
+  
+  dist_to_net    <- NULL
+  dist_to_no_net <- NULL
+  for (j in 1:nrow(nets)) {
+    
+    dist_to_net[j] <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
+    
+  }
+  
+  for (k in 1:nrow(no_nets)) {
+    
+    dist_to_no_net[k] <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(no_nets$longitude[k]), deg2rad(no_nets$latitude[k]), deg2rad(no_nets$longitude[k]))*1000 #m
+    
+  }
+  
+  if (min(dist_to_net) < min(dist_to_no_net)) {
+    
+    closest_to_netted[i] <- TRUE
+    
+  } else {
+    
+    closest_to_netted[i] <- FALSE
+    
+  }
+  
+}
+table(closest_to_netted) #78% of sightings are closer to a netted beach than a non-netted beach, however 77% of beaches are netted
 
-
-
-
-
-
-
-
-
-
+#77% of beaches are netted
+#78% of sightings are closer to a netted beach than a non-netted beach
 
 
 
