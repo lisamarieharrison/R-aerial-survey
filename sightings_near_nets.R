@@ -22,8 +22,12 @@ for (f in source_list) {
 
 dat <- dat[dat$Type == "S", ]
 dat$Lat <- as.numeric(as.character(dat$Lat))
+dat$Long <- as.numeric(as.character(dat$Long))
 dat <- dat[!is.na(dat$Lat), ]
 dat <- dat[dat$Species == "BOT", ]
+
+#check for positive latitudes
+dat$Lat[dat$Lat > 0] <- dat$Lat[dat$Lat > 0]*-1
 
 animals <- NULL
 area    <- NULL
@@ -114,3 +118,64 @@ for (j in 1:nrow(nets)) {
 }
 diag(net_distance) <- NA
 apply(net_distance, 2, min, na.rm = TRUE) #some nets have other nets only 180m away
+
+
+#distance to closest net
+sighting_to_net <- matrix(NA, nrow = nrow(nets), ncol = nrow(dat))
+for (j in 1:nrow(nets)) {
+  
+  for (i in 1:nrow(dat)) {
+    
+    sighting_to_net[j, i] <- gcdHF(deg2rad(dat$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
+    
+  }
+  
+}
+hist(apply(sighting_to_net, 2, min, na.rm = TRUE), xlab = "min distance to net (m)")
+
+
+
+library(sp)
+
+
+marked_points <- data.frame("longitude" = dat$Long, "latitude" = dat$Lat, "mark" = "sighting")
+marked_points <- rbind(marked_points, data.frame("longitude" = nets$longitude, "latitude" = nets$latitude, "mark" = "net"))
+
+#convert to utm so units are in m
+xy = data.frame(marked_points$longitude, marked_points$latitude)
+colnames(coordinates(xy)) <- c("lon", "lat")
+proj4string(xy) <- CRS("+proj=longlat +datum=WGS84")
+marked_points[, 1:2] <- coordinates(spTransform(xy, CRS("+proj=utm +zone=53 ellps=WGS84")))
+
+
+transect_bounds <- ppp(x = rep(mean(marked_points$longitude), 2), y = c(min(marked_points$latitude), max(marked_points$latitude)), rep(mean(marked_points$longitude), 2), c(min(marked_points$latitude), max(marked_points$latitude)))
+transect_line <- linnet(vertices = transect_bounds, m = matrix(TRUE, nrow = 2, ncol = 2))
+marked_points$longitude <- mean(marked_points$longitude)
+point_network <- lpp(X = marked_points, L = transect_line) #check duplicated values
+
+#linear K cross
+K <- linearKcross(point_network, "net", "sighting")
+plot(K)
+
+#pair correlation function
+pair_correlation <- linearpcfcross(point_network, "net", "sighting")
+plot(pair_correlation, xlim = c(0, 8000)) #cut off at 8 km because the largest gap between nets is 8km
+
+
+#same analysis on sandy beaches
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
