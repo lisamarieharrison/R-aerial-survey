@@ -4,19 +4,24 @@
 
 if (Sys.info()[4] == "SCI-6246") {
   setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
-  source_location <- "~/Lisa/phd/aerial survey/R/R-aerial-survey/"
+  source_location <- "~/Lisa/phd/Mixed models/R code/R-functions-southern-ocean/"
 } else {
   setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/data")
-  source_location <- "~/phd/aerial survey/R/code/R-aerial-survey/"
+  source_location <- "~/phd/southern ocean/Mixed models/R code/R-functions-southern-ocean/"
 }
 
-dat <- read.csv("aerial_survey_summary_r.csv", header = T)
+dat  <- read.csv("aerial_survey_summary_r.csv", header = T)
 nets <- read.csv("shark_net_locations.csv", header = T)
 
-source("C:/Users/Lisa/Documents/phd/southern ocean/Mixed models/R code/R-functions-southern-ocean/deg2rad.R")
-source("C:/Users/Lisa/Documents/phd/southern ocean/Mixed models/R code/R-functions-southern-ocean/gcdHF.R")
+source_list <- c("deg2rad.R",
+       "gcdHF.R")
+
+for (f in source_list) {
+  source(paste0(source_location, f))
+}
 
 dat <- dat[dat$Type == "S", ]
+dat$Lat <- as.numeric(as.character(dat$Lat))
 dat <- dat[!is.na(dat$Lat), ]
 dat <- dat[dat$Species == "BOT", ]
 
@@ -55,7 +60,7 @@ inclusionPercent <- function(rad) {
   
 }
 
-for (radius in seq(100, 2500, by = 100)) {
+for (radius in seq(100, 4000, by = 100)) {
   
   radius_around_nets <- radius #m
   
