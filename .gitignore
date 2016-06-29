@@ -4,3 +4,4 @@
 *.log
 .Rproj.user
 R-aerial-survey.Rproj
+.Rhistory
