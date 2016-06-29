@@ -11,20 +11,20 @@ if (Sys.info()[4] == "SCI-6246") {
 }
 library(sp)
 library(spatstat)
+library(plyr)
 
-dat  <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
-nets <- read.csv("shark_net_locations.csv", header = T) #coordinates of shark nets
+dat     <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
+nets    <- read.csv("shark_net_locations.csv", header = T) #coordinates of shark nets
 no_nets <- read.csv("beaches_without_nets.csv", header = T) #coordinates of sandy beaches with no shark net
 
 source_list <- c("deg2rad.R",
-       "gcdHF.R")
+                 "gcdHF.R")
 
-for (f in source_list) {
-  source(paste0(source_location, f))
-}
+invisible(Map(source, paste0(source_location, source_list)))
+
 
 dat <- dat[dat$Type == "S", ]
-dat$Lat <- as.numeric(as.character(dat$Lat))
+dat$Lat  <- as.numeric(as.character(dat$Lat))
 dat$Long <- as.numeric(as.character(dat$Long))
 dat <- dat[!is.na(dat$Lat), ]
 dat$Lat[dat$Lat > 0] <- dat$Lat[dat$Lat > 0]*-1
@@ -32,113 +32,71 @@ dat$Lat[dat$Lat > 0] <- dat$Lat[dat$Lat > 0]*-1
 dat_bot  <- dat[dat$Species == "BOT", ]
 dat_fish <- dat[dat$Species == "B", ]
 
-animals <- NULL
-area    <- NULL
 
-
-inclusionPercent <- function(rad) {
+distAllCombinations <- function (lat1, lat2, long) {
   
-  #how to account for overlap of radiuses when net radiuses are overlapping?
+  coords_to_compare <- deg2rad(data.frame("lat1" = rep(lat1, each = length(lat2)), "long1" = rep(mean(long), each = length(lat2)), "lat2" = lat2, "long2" = mean(long)))
+  dist_all <- mapply(gcdHF, coords_to_compare$lat1, coords_to_compare$long1, coords_to_compare$lat2, coords_to_compare$long2)*1000 #m
   
-  lats_to_check <- seq(min(nets$latitude), max(nets$latitude), by = 0.001) #check 100m sequence
-  point_in_nets <- rep(FALSE, length(lats_to_check))
-  for (i in 1:length(lats_to_check)) {
-    
-    for (j in 1:nrow(nets)) {
-      
-      dist_to_net <- gcdHF(deg2rad(lats_to_check[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
-      
-      if (dist_to_net <= rad) {
-        
-        point_in_nets[i] <- TRUE
-        
-        break
-        
-      }
-      
-      
-    }  
-    
-  }
+  dist_all_mat <- matrix(dist_all, nrow = length(lat1), byrow = TRUE) 
   
-  percentage_coverage <- sum(point_in_nets)/length(point_in_nets)*100
-  
-  return (percentage_coverage)
+  return (dist_all_mat)
   
 }
 
-for (radius in seq(100, 4000, by = 100)) {
+
+withinRadiusOfBeach <- function(radius, net_coords, lats, longs=net_coords$longitude) {
   
-  radius_around_nets <- radius #m
+  #function to check percentage coverage of survey area by shark net_coords
+  #radius = vector of distances (m) of radius from shark net for a sighting to be considered to be at the net
+  #lats = vector of latitudes to check if they are near the net_coords
+  #longs = optional vector of longitudes. Defaults to using net_coords if not specified
+  #return: numeric of percentage of points that fell within the specified distance to the net
+
+  point_in_net_coords <- rep(FALSE, length(lats)) #boolean: is the point near a net
   
-  at_beach <- matrix(FALSE, nrow = nrow(nets), ncol = nrow(dat_bot))
-  for (i in 1:ncol(at_beach)) {
-    
-    for (j in 1:nrow(at_beach)) {
-      
-      distance <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
-      
-      if (distance < radius_around_nets) {
-        
-        at_beach[j, i] <- TRUE
-        
-        break
-        
-      }
-      
-    }
-    
-  }
+  #coords_to_compare <- deg2rad(data.frame("lat1" = rep(lats, each = nrow(net_coords)), "long1" = longs, "lat2" = net_coords$latitude, "long2" = longs))
+  #dist_to_net <- mapply(gcdHF, coords_to_compare$lat1, coords_to_compare$long1, coords_to_compare$lat2, coords_to_compare$long2)*1000 #m
   
-  #percent of sightings within specified radius of nets
-  animals <- c(animals, table(colSums(at_beach))[2] / sum( table(colSums(at_beach)))*100)
+  dist_to_net_mat <- distAllCombinations(lats, net_coords$latitude, longs)
   
-  #survey length = 265km
-  #covered area by nets 
+  #dist_to_net_mat <- matrix(dist_to_net, nrow = length(lats), byrow = TRUE) 
   
-  area <- c(area, inclusionPercent(radius_around_nets))
-  #area <- c(area, (51*2*radius_around_nets/1000)/265 * 100)
+  point_at_net <-lapply(radius, function(x) rowSums(dist_to_net_mat <= x) > 0)
+
+  perc_in_radius <- unlist(lapply(point_at_net, function(x)  sum(x)/length(x)*100))
+  
+  return (perc_in_radius)
   
 }
+
+#radiuses to check
+radius <- seq(100, 4000, by = 100)
+
+#percentage of animals at beach
+animals <- withinRadiusOfBeach(radius, nets, dat_bot$Lat)
+
+#covered area by nets at each radius
+lats_to_check <- seq(min(nets$latitude), max(nets$latitude), by = 0.001) #check 100m sequence
+area <- withinRadiusOfBeach(radius, nets, lats_to_check)
 
 plot(area, animals, xlim = c(1, 100), ylim = c(1, 100))
 points(c(0, 100), c(0, 100), type = "l", col = "red")
 
 
 
-
-
 #closest nets to each other to check how soon overlap will occur
-net_distance <- matrix(NA, nrow = nrow(nets), ncol = nrow(nets))
-for (j in 1:nrow(nets)) {
-  
-  for (i in 1:nrow(nets)) {
-    
-    net_distance[j, i] <- gcdHF(deg2rad(nets$latitude[i]), deg2rad(nets$longitude[i]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
-    
-  }
-  
-}
+net_distance  <- distAllCombinations(nets$latitude, nets$latitude, nets$longitude)
 diag(net_distance) <- NA
 apply(net_distance, 2, min, na.rm = TRUE) #some nets have other nets only 180m away
 
 
 #distance of each sighting to closest net
-sighting_to_net <- matrix(NA, nrow = nrow(nets), ncol = nrow(dat_bot))
-for (j in 1:nrow(nets)) {
-  
-  for (i in 1:nrow(dat_bot)) {
-    
-    sighting_to_net[j, i] <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
-    
-  }
-  
-}
+sighting_to_net  <- distAllCombinations(dat_bot$Lat, nets$latitude, nets$longitude)
 hist(apply(sighting_to_net, 2, min, na.rm = TRUE), xlab = "min distance to net (m)")
 
 
-#spatial analysis of dolphins and nets
-
+# ----------------------- SPATIAL ANALYSIS OF DOLPHINS AND NETS -------------------------#
 
 marked_points <- data.frame("longitude" = dat_bot$Long, "latitude" = dat_bot$Lat, "mark" = "dolphin")
 marked_points <- rbind(marked_points, data.frame("longitude" = dat_fish$Long, "latitude" = dat_fish$Lat, "mark" = "fish"))
@@ -163,7 +121,7 @@ plot(K)
 
 #pair correlation function
 pair_correlation <- linearpcfcross(point_network, "net", "dolphin")
-plot(pair_correlation) #cut off at 8 km because the largest gap between nets is 8km
+plot(pair_correlation) 
 
 
 #adding sandy beaches without shark nets
@@ -171,49 +129,40 @@ K <- linearKcross(point_network, "no_net", "dolphin")
 plot(K)
 
 pair_correlation <- linearpcfcross(point_network, "no_net", "dolphin")
-plot(pair_correlation, xlim = c(0, 8000)) #cut off at 8 km because the largest gap between nets is 8km
+plot(pair_correlation) 
 
+#combining all beaches together
+marked_points$mark <- revalue(marked_points$mark, c(no_net = "beach", net = "beach"))
+point_network <- lpp(X = marked_points, L = transect_line) #check duplicated values
+
+pair_correlation <- linearpcfcross(point_network, "beach", "dolphin")
+plot(pair_correlation) 
 
 
 #dolphin fish school correlation
 pair_correlation <- linearpcfcross(point_network, "fish", "dolphin")
-plot(pair_correlation) #cut off at 8 km because the largest gap between nets is 8km
+plot(pair_correlation) 
 
 
 #is a sighting closer to a netted beach or non-netted beach
 
-closest_to_netted <- NULL
-for (i in 1:nrow(dat_bot)) {
-  
-  dist_to_net    <- NULL
-  dist_to_no_net <- NULL
-  for (j in 1:nrow(nets)) {
-    
-    dist_to_net[j] <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(nets$longitude[j]), deg2rad(nets$latitude[j]), deg2rad(nets$longitude[j]))*1000 #m
-    
-  }
-  
-  for (k in 1:nrow(no_nets)) {
-    
-    dist_to_no_net[k] <- gcdHF(deg2rad(dat_bot$Lat[i]), deg2rad(no_nets$longitude[k]), deg2rad(no_nets$latitude[k]), deg2rad(no_nets$longitude[k]))*1000 #m
-    
-  }
-  
-  if (min(dist_to_net) < min(dist_to_no_net)) {
-    
-    closest_to_netted[i] <- TRUE
-    
-  } else {
-    
-    closest_to_netted[i] <- FALSE
-    
-  }
-  
-}
+
+#closest net
+closest_net   <- apply(dist_to_net, 2, min, na.rm = TRUE)
+
+#closest no_net
+dist_to_no_net  <- distAllCombinations(dat_bot$Lat, no_nets$latitude, no_nets$longitude)
+closest_no_net   <- apply(dist_to_no_net, 2, min, na.rm = TRUE)
+
+closest_to_netted <- closest_net < closest_no_net
+closest_to_netted[closest_net > 1000 & closest_no_net > 1000] <- NA #can specify maximum distance from net/no_net
+
+
 table(closest_to_netted) #78% of sightings are closer to a netted beach than a non-netted beach, however 77% of beaches are netted
 
 #77% of beaches are netted
 #78% of sightings are closer to a netted beach than a non-netted beach
 
+#84% of sightings withing 1km of a beach are at a netted beach vs non-netted
 
 
