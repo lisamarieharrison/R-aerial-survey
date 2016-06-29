@@ -148,11 +148,11 @@ plot(pair_correlation)
 
 
 #closest net
-closest_net   <- apply(dist_to_net, 2, min, na.rm = TRUE)
+closest_net   <- apply(sighting_to_net, 1, min, na.rm = TRUE)
 
 #closest no_net
 dist_to_no_net  <- distAllCombinations(dat_bot$Lat, no_nets$latitude, no_nets$longitude)
-closest_no_net   <- apply(dist_to_no_net, 2, min, na.rm = TRUE)
+closest_no_net   <- apply(dist_to_no_net, 1, min, na.rm = TRUE)
 
 closest_to_netted <- closest_net < closest_no_net
 closest_to_netted[closest_net > 1000 & closest_no_net > 1000] <- NA #can specify maximum distance from net/no_net
