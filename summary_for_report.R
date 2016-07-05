@@ -2,6 +2,14 @@
 #author: Lisa-Marie Harrison
 #date: 22/04/2016
 
+
+dat <- read.csv("C:/Users/43439535/Documents/Lisa/phd/aerial survey/data/aerial_survey_summary_r.csv", header = T)
+source("~/Lisa/phd/aerial survey/R/R-aerial-survey/fun_calculate_envt_effort.R")
+source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/createDistanceData.R")
+source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/mrds_modified_functions.R")
+source("~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/calcAbundanceAndCVExtraP.R")
+source("~/Lisa/phd/aerial survey/R/R-aerial-survey/mrds_modified_for_gamma.R")
+
 if (Sys.info()[4] == "SCI-6246") {
   setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
   source_location <- "~/Lisa/phd/aerial survey/R/R-aerial-survey/"
@@ -9,6 +17,7 @@ if (Sys.info()[4] == "SCI-6246") {
   setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/data")
   source_location <- "~/phd/aerial survey/R/code/R-aerial-survey/"
 }
+
 library(chron)
 library(plyr)
 library(mrds)
