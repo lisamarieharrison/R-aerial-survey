@@ -376,7 +376,7 @@ distance.sample.size(cv.pct = 30, N = 100, detection.function = "hazard", theta 
 
 
 p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~1),
-               data = total_obs[total_obs$Species == "BOT", ], meta.data = list(left = 50, width = 500))
+               data = total_obs[total_obs$Species == "S", ], meta.data = list(left = 50, width = 500))
 
 
 p_total <- ddf(method = 'trial',dsmodel =~ cds(key = "gamma", formula=~1), mrmodel =~ glm(formula=~bs(distance,degree=4)),
