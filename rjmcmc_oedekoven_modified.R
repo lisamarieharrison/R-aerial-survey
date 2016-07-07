@@ -158,7 +158,7 @@ count.prop.mean<-c(-13.06, 0, rnorm(22, 0, 1))
 count.prop.sd<-c(0.30, 0, rep(0.1,22))
 
 msyt.prop.mean <- count.prop.mean #??
-count.prop.sd <- count.prop.sd#??
+msyt.prop.sd <- count.prop.sd#??
 
 ################## picking the first model for detection function
 det.model[1, 1] <- 5   # global hazard-rate: \bmath{\theta} = \{\sigma,\tau\}
@@ -237,23 +237,23 @@ l.prior.sha<-function(shap){
   return(sum(log.u.sha))
 }
 
-# for scale coefficients
-# for type covariate
-# l.prior.coeftyp<-function(coefsig){
-#   lcs<-length(coefsig)
-#   log.u.coefsig<-array(NA,lcs)
-#   for (k in 1:lcs){
-#     log.u<-log(dunif(coefsig[k],-3,3))          
-#     ifelse(abs(log.u)==Inf,log.u.coefsig[k]<- -100000,log.u.coefsig[k]<-log.u)}
-#   return(sum(log.u.coefsig))}
-# 
-# l.prior.coef<-function(coefsig){
-#   lcs<-length(coefsig)
-#   log.u.coefsig<-array(NA,lcs)
-#   for (k in 1:lcs){
-#     log.u<-log(dunif(coefsig[k],-2.5,2.5))
-#     ifelse(abs(log.u)==Inf,log.u.coefsig[k]<- -100000,log.u.coefsig[k]<-log.u)}
-#   return(sum(log.u.coefsig))}
+#for scale coefficients
+#for type covariate
+l.prior.coeftyp<-function(coefsig){
+  lcs<-length(coefsig)
+  log.u.coefsig<-array(NA,lcs)
+  for (k in 1:lcs){
+    log.u<-log(dunif(coefsig[k],-3,3))
+    ifelse(abs(log.u)==Inf,log.u.coefsig[k]<- -100000,log.u.coefsig[k]<-log.u)}
+  return(sum(log.u.coefsig))}
+
+l.prior.coef<-function(coefsig){
+  lcs<-length(coefsig)
+  log.u.coefsig<-array(NA,lcs)
+  for (k in 1:lcs){
+    log.u<-log(dunif(coefsig[k],-2.5,2.5))
+    ifelse(abs(log.u)==Inf,log.u.coefsig[k]<- -100000,log.u.coefsig[k]<-log.u)}
+  return(sum(log.u.coefsig))}
 
 ### the priors for density model parameters
 
@@ -389,7 +389,7 @@ match.function<-function(xmod,model.matrix){
 #################################  the RJMCMC algorithm ######################################
 # nt is the number of iterations and is set above
 # row 1 is filled in with initial values for parameters and models
-for (i in 2:nt){
+for (i in 2:nt) {
   print(i)
   
   ##################### RJ step : sequential proposals to add or delete covariates depending on whether they are in the model or not #####
@@ -428,8 +428,8 @@ for (i in 2:nt){
   V <- runif(1)
   if (V <= A) {                           # if move is accepted change current values to new values
     rj.cursigs <- rj.newsigs               
-    curpa <- newpa}
-  else {                             
+    curpa <- newpa
+  } else {                             
     rj.newsigs<-rj.cursigs               # if move is rejected, reset everything to current
     newpa<-curpa
   }
@@ -449,43 +449,44 @@ for (i in 2:nt){
   })
   A<-min(1,exp(num-den))
   V<-runif(1)
-  ifelse(V<=A,{                             # if new model is accepted
+  if (V<=A) {                             # if new model is accepted
     rj.cursigs<-rj.newsigs                
-    curpa<-newpa},
-    {                            # if model is rejected, reset everything
-      rj.newsigs<-rj.cursigs
-      newpa<-curpa
-    })
+    curpa<-newpa
+  } else {                            # if model is rejected, reset everything
+    rj.newsigs<-rj.cursigs
+    newpa<-curpa
+  }
   
   
   # for the state coefficients
-  ifelse(curpa[6]==0,{
+  if(curpa[6]==0) {
     newpa[6:15]<-1
     newpara<-which(newpa==1)
     rj.newsigs[6:15]<-rnorm(10,det.prop.mean[6:15],det.prop.sd[6:15])
     num<-log.lik.fct(c(rj.newsigs,rj.curparam)) + l.prior.coef(rj.newsigs[6:15])
     den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newsigs[6:15],msyt.prop.mean[6:15],msyt.prop.sd[6:15])))
-  } ,
-  {
+  } else {
     newpa[6:15]<-0
     rj.newsigs[6:15]<-0
     num<-log.lik.fct(c(rj.newsigs,rj.curparam))+ sum(log(dnorm(rj.cursigs[6:15],msyt.prop.mean[6:15],msyt.prop.sd[6:15])))
     den<-log.lik.fct(c(rj.cursigs,rj.curparam))+ l.prior.coef(rj.cursigs[6:15])
-  })
-  den<-den.l+den.pro
-  num<-num.l+num.pro
+  }
+  #den<-den.l+den.pro not referenced anywhere?
+  #num<-num.l+num.pro not referenced anywhere?
   
-  A<-min(1,exp(num-den))
-  V<-runif(1)
-  ifelse(V<=A,{                             
+  curpara <- newpara #added because curpara not referenced
+  
+  A <- min(1,exp(num-den))
+  V <- runif(1)
+  if (V <= A) {                             
     rj.cursigs<-rj.newsigs               
-    curpara<-newpara
-    curpa<-newpa},
-    {                             
-      rj.newsigs<-rj.cursigs
-      newpara<-curpara
-      newpa<-curpa
-    })
+    curpara <- newpara
+    curpa <- newpa
+  } else {                             
+    rj.newsigs<-rj.cursigs
+    newpara <- curpara
+    newpa <- curpa
+  }
   
   # which model did we end up with 
   cur.dmod<-match.function(curpa,det.list)
@@ -501,163 +502,208 @@ for (i in 2:nt){
   new.par<-cur.par
   
   # for the year coefficient
-  ifelse (cur.par[3]==0,                                    # if year is not in current model, propose to add it
-          {new.par[3:4]<-1
-          # obtain a parameter value from the proposal distribution
-          rj.newparam[3:4]<-rnorm(2,count.prop.mean[3:4],count.prop.sd[3:4])
-          # test which model is better
-          # the numerator of eqn (11)
-          num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior.year(rj.newparam[3:4]) 
-          # the denominator of eqn (11)
-          den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newparam[3:4],count.prop.mean[3:4],count.prop.sd[3:4])))
-          A<-min(1,exp(num-den))
-          V<-runif(1)
-          ifelse(V<=A,{                             
-            rj.curparam<-rj.newparam               
-            cur.par<-new.par},
-            {                             
-              rj.newparam<-rj.curparam
-              new.par<-cur.par
-            })
-          } ,
-          {
-            rj.newparam[3:4]<-0                            # if year is in the current model, propose to delete it
-            new.par[3:4]<-0
-            num<-log.lik.fct(c(rj.cursigs,rj.newparam))  + sum(log(dnorm(rj.curparam[3:4],count.prop.mean[3:4],count.prop.sd[3:4])))
-            den<-log.lik.fct(c(rj.cursigs,rj.curparam))  + l.prior.year(rj.curparam[3:4]) #+ sum(log(dnorm(rj.newparam[new.p],count.prop.mean[new.p],count.prop.sd[new.p])))
-            A<-min(1,exp(num-den))
-            V<-runif(1)
-            ifelse(V<=A,{                             
-              rj.curparam<-rj.newparam              
-              cur.par<-new.par},
-              {                             
-                rj.newparam<-rj.curparam
-                new.par<-cur.par
-              })
-          } )
-  # the type coefficient
-  ifelse(cur.par[5]==0,                              # if type is not in current model, propose to add it
-         {new.par[5]<-1
-         rj.newparam[5]<-rnorm(1,count.prop.mean[5],count.prop.sd[5])
-         num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior.type(rj.newparam[5]) 
-         den<-log.lik.fct(c(rj.cursigs,rj.curparam))  + sum(log(dnorm(rj.newparam[5],count.prop.mean[5],count.prop.sd[5])))
-         A<-min(1,exp(num-den))
-         V<-runif(1)
-         ifelse(V<=A,{                             
-           rj.curparam<-rj.newparam               
-           cur.par<-new.par},
-           {                             
-             rj.newparam<-rj.curparam
-             new.par<-cur.par
-           })
-         } ,
-         {
-           rj.newparam[5]<-0                              # if type is in the current model, propose to delete it
-           new.par[5]<-0
-           num<-log.lik.fct(c(rj.cursigs,rj.newparam))  + sum(log(dnorm(rj.curparam[5],count.prop.mean[5],count.prop.sd[5])))
-           den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior.type(rj.curparam[5]) 
-           A<-min(1,exp(num-den))
-           V<-runif(1)
-           ifelse(V<=A,{                             
-             rj.curparam<-rj.newparam               
-             cur.par<-new.par},
-             {                             
-               rj.newparam<-rj.curparam
-               new.par<-cur.par
-             })
-         }  )
-  # the day coefficient
-  ifelse(cur.par[6]==0,                              # if Julian day is not in the current model, propose to add it
-         {new.par[6]<-1
-         rj.newparam[6]<-rnorm(1,count.prop.mean[6],count.prop.sd[6])
-         num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior.day(rj.newparam[6]) 
-         den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newparam[6],count.prop.mean[6],count.prop.sd[6])))
-         A<-min(1,exp(num-den))
-         V<-runif(1)
-         ifelse(V<=A,{                            
-           rj.curparam<-rj.newparam              
-           cur.par<-new.par},
-           {                            
-             rj.newparam<-rj.curparam
-             new.par<-cur.par
-           })
-         }  ,
-         {
-           rj.newparam[6]<-0                              # if Julian day is in the current model, propose to delete it
-           new.par[6]<-0
-           num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + sum(log(dnorm(rj.curparam[6],count.prop.mean[6],count.prop.sd[6])))
-           den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior.day(rj.curparam[6]) 
-           A<-min(1,exp(num-den))
-           V<-runif(1)
-           ifelse(V<=A,{                             
-             rj.curparam<-rj.newparam               
-             cur.par<-new.par},
-             {                             
-               rj.newparam<-rj.curparam
-               new.par<-cur.par
-             })
-         } )
-  # the state coefficient
-  ifelse(cur.par[8]==0,                             # if state is not in the current model, propose to add it
-         {new.par[8:17]<-1
-         for (f in 8:17){
-           rj.newparam[f]<-rnorm(1,count.prop.mean[f],count.prop.sd[f])}
-         num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior.st(rj.newparam[8:17]) 
-         den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newparam[8:17],count.prop.mean[8:17],count.prop.sd[8:17])))
-         A<-min(1,exp(rjc.num-rjc.den))
-         V<-runif(1)
-         ifelse(V<=A,{                             
-           rj.curparam<-rj.newparam               
-           cur.par<-new.par},
-           {                             
-             rj.newparam<-rj.curparam
-             new.par<-cur.par
-           })
-         } ,
-         {
-           rj.newparam[8:17]<-0                          # if state is in the current model, propose to delete it
-           new.par[8:17]<-0
-           num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + sum(log(dnorm(rj.curparam[8:17],count.prop.mean[8:17],count.prop.sd[8:17])))
-           den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior.st(rj.curparam[8:17]) 
-           A<-min(1,exp(rjc.num-rjc.den))
-           V<-runif(1)
-           ifelse(V<=A,{                             
-             rj.curparam<-rj.newparam               
-             cur.par<-new.par},
-             {                             
-               rj.newparam<-rj.curparam
-               new.par<-cur.par
-             })
-         }  )
+  if (sum(cur.par[grep("year", names(cur.par))]) == 0) {    # if year is not in current model, propose to add it
+    new.par[3:4]<-1
+    # obtain a parameter value from the proposal distribution
+    rj.newparam[3:4]<-rnorm(2,count.prop.mean[3:4],count.prop.sd[3:4])
+    # test which model is better
+    # the numerator of eqn (11)
+    num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior(rj.newparam[3:4]) 
+    # the denominator of eqn (11)
+    den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newparam[3:4],count.prop.mean[3:4],count.prop.sd[3:4])))
+    A<-min(1,exp(num-den))
+    V<-runif(1)
+    ifelse(V<=A,{                             
+      rj.curparam<-rj.newparam               
+      cur.par<-new.par},
+      {                             
+        rj.newparam<-rj.curparam
+        new.par<-cur.par
+      })
+  } else {
+    rj.newparam[grep("year", names(cur.par))] <- 0   # if year is in the current model, propose to delete it
+    new.par[grep("year", names(cur.par))] <- 0
+    num <- log.lik.fct(c(rj.cursigs,rj.newparam))  + sum(log(dnorm(rj.curparam[grep("year", names(cur.par))],count.prop.mean[grep("year", names(cur.par))],count.prop.sd[grep("year", names(cur.par))])))
+    den <- log.lik.fct(c(rj.cursigs,rj.curparam))  + l.prior(rj.curparam[grep("year", names(cur.par))], -1, 1) #+ sum(log(dnorm(rj.newparam[new.p],count.prop.mean[new.p],count.prop.sd[new.p])))
+    A <- min(1, exp(num - den))
+    V <- runif(1)
+    if (V <= A){                             
+      rj.curparam <- rj.newparam              
+      cur.par <- new.par
+    } else {                             
+      rj.newparam <- rj.curparam
+      new.par <- cur.par
+    }
+  } 
+  
+  # for the season coefficient
+  season_indeces <- grep("season", names(cur.par))
+  if (sum(cur.par[season_indeces]) == 0) {                  # if season is not in current model, propose to add it
+    new.par[season_indeces] <- 1
+    for (f in season_indeces) {
+      rj.newparam[f] <- rnorm(1,count.prop.mean[f], count.prop.sd[f])
+    }
+    rj.newparam[season_indeces] <- rnorm(1, count.prop.mean[season_indeces], count.prop.sd[season_indeces])
+    num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[season_indeces], -1, 1) 
+    den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[season_indeces], count.prop.mean[season_indeces], count.prop.sd[season_indeces])))
+    A <- min(1, exp(num-den))
+    V <- runif(1)
+    if (V <= A) {                             
+      rj.curparam <- rj.newparam               
+      cur.par <- new.par
+    } else {                             
+      rj.newparam<-rj.curparam
+      new.par<-cur.par
+    }
+  } else {
+    rj.newparam[season_indeces]<-0         # if season is in the current model, propose to delete it
+    new.par[season_indeces]<-0
+    num <- log.lik.fct(c(rj.cursigs,rj.newparam))  + sum(log(dnorm(rj.curparam[season_indeces],count.prop.mean[season_indeces],count.prop.sd[season_indeces])))
+    den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior(rj.curparam[season_indeces], -1, 1) 
+    A <- min(1, exp(num-den))
+    V <- runif(1)
+    if ( V<= A) {                             
+      rj.curparam <- rj.newparam               
+      cur.par <- new.par
+    } else {                             
+      rj.newparam <- rj.curparam
+      new.par <- cur.par
+    }
+  }  
+  # the sea state coefficient
+  ss_indeces <- grep("s[[:digit:]]", names(cur.par))
+  if (sum(cur.par[ss_indeces]) == 0) {          # if sea state is not in the current model, propose to add it
+    new.par[ss_indeces] <- 1
+    for (f in ss_indeces) {
+      rj.newparam[f] <- rnorm(1,count.prop.mean[f], count.prop.sd[f])
+    }
+    rj.newparam[ss_indeces] <- rnorm(1,count.prop.mean[ss_indeces],count.prop.sd[ss_indeces])
+    num <- log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior(rj.newparam[ss_indeces], -1, 1) 
+    den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newparam[ss_indeces], count.prop.mean[ss_indeces], count.prop.sd[ss_indeces])))
+    A <- min(1,exp(num-den))
+    V <- runif(1)
+    if ( V <= A) {                            
+      rj.curparam <- rj.newparam              
+      cur.par <- new.par
+    } else {                            
+      rj.newparam <- rj.curparam
+      new.par <- cur.par
+    }
+  } else {
+    rj.newparam[ss_indeces] <- 0                              # if Julian day is in the current model, propose to delete it
+    new.par[ss_indeces] <- 0
+    num <- log.lik.fct(c(rj.cursigs,rj.newparam)) + sum(log(dnorm(rj.curparam[ss_indeces],count.prop.mean[ss_indeces],count.prop.sd[ss_indeces])))
+    den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior(rj.curparam[ss_indeces], -1, 1) 
+    A <- min(1, exp(num-den))
+    V <- runif(1)
+    if (V <= A) {                             
+      rj.curparam <- rj.newparam               
+      cur.par <- new.par
+    } else {                             
+      rj.newparam <- rj.curparam
+      new.par <- cur.par
+    }
+  } 
+  # the cloud cover coefficient
+  cc_indeces <- grep("cc", names(cur.par))
+  if (sum(cur.par[cc_indeces]) == 0) {         # if cloud cover is not in the current model, propose to add it
+    new.par[cc_indeces]<-1
+    for (f in cc_indeces) {
+      rj.newparam[f] <- rnorm(1,count.prop.mean[f], count.prop.sd[f])
+    }
+    num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior(rj.newparam[cc_indeces], -1, 1) 
+    den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newparam[cc_indeces], count.prop.mean[cc_indeces], count.prop.sd[cc_indeces])))
+    A <- min(1,exp(num-den)) #changed rjc.num to num and rjc.den to den
+    V <- runif(1)
+    if (V <= A) {                             
+      rj.curparam<-rj.newparam               
+      cur.par<-new.par
+    } else {                             
+      rj.newparam<-rj.curparam
+      new.par<-cur.par
+    }
+  } else {
+    rj.newparam[cc_indeces]<-0         # if cloud cover is in the current model, propose to delete it
+    new.par[cc_indeces]<-0
+    num <- log.lik.fct(c(rj.cursigs,rj.newparam)) + sum(log(dnorm(rj.curparam[cc_indeces],count.prop.mean[cc_indeces],count.prop.sd[cc_indeces])))
+    den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior(rj.curparam[cc_indeces], -1, 1) 
+    A <- min(1,exp(num-den)) #changed rjc.num to num and rjc.den to den
+    V <- runif(1)
+    if (V<=A ) {                             
+      rj.curparam<-rj.newparam               
+      cur.par<-new.par
+    } else {                             
+      rj.newparam<-rj.curparam
+      new.par<-cur.par
+    }
+  }  
+  
+  #for water clarity coefficient
+  wc_indeces <- grep("wc", names(cur.par))
+  if (sum(cur.par[wc_indeces]) == 0) {         # if water clarity is not in the current model, propose to add it
+    new.par[wc_indeces]<-1
+    for (f in wc_indeces) {
+      rj.newparam[f] <- rnorm(1,count.prop.mean[f], count.prop.sd[f])
+    }
+    num<-log.lik.fct(c(rj.cursigs,rj.newparam)) + l.prior(rj.newparam[wc_indeces], -1, 1) 
+    den<-log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newparam[wc_indeces], count.prop.mean[wc_indeces], count.prop.sd[wc_indeces])))
+    A <- min(1,exp(num-den)) #changed rjc.num to num and rjc.den to den
+    V <- runif(1)
+    if (V <= A) {                             
+      rj.curparam<-rj.newparam               
+      cur.par<-new.par
+    } else {                             
+      rj.newparam<-rj.curparam
+      new.par<-cur.par
+    }
+  } else {
+    rj.newparam[wc_indeces]<-0         # if water clarity is in the current model, propose to delete it
+    new.par[wc_indeces]<-0
+    num <- log.lik.fct(c(rj.cursigs,rj.newparam)) + sum(log(dnorm(rj.curparam[wc_indeces],count.prop.mean[wc_indeces],count.prop.sd[wc_indeces])))
+    den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior(rj.curparam[wc_indeces], -1, 1) 
+    A <- min(1,exp(num-den)) #changed rjc.num to num and rjc.den to den
+    V <- runif(1)
+    if (V<=A ) {                             
+      rj.curparam<-rj.newparam               
+      cur.par<-new.par
+    } else {                             
+      rj.newparam<-rj.curparam
+      new.par<-cur.par
+    }
+  }  
+  
+  
   # which model did we end up with:
-  cur.mod<-match.function(cur.par,count.list)
-  count.model[i]<-cur.mod
+  cur.mod<-match.function(cur.par, count.list)
+  count.model[i] <- cur.mod
   
   ########################## Metropolis Hastings update ########################################################
   
   ########## updating the detection function parameters
-  mh.newsigs<-rj.cursigs
-  mh.cursigs<-rj.cursigs
+  mh.newsigs <- rj.cursigs
+  mh.cursigs <- rj.cursigs
   
   # for scale intercept
-  u<-rnorm(1,0,3.5)                
-  if((mh.cursigs[1]+u)>1){         # prevents scale intercept to become < 0
-    mh.newsigs[1]<-mh.cursigs[1]+u
+  u <- rnorm(1, 0, 3.5)                
+  if ((mh.cursigs[1] + u) > 1) {    
+    # prevents scale intercept to become < 0
+    mh.newsigs[1] <- mh.cursigs[1] + u
     # the numerator of eqn (8)   (LN: This is is A.1)
-    num<-log.lik.fct(c(mh.newsigs,rj.curparam)) + l.prior.sig(mh.newsigs[1])
+    num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1])
     # the denominator of eqn (8)
-    den<-log.lik.fct(c(mh.cursigs,rj.curparam)) + l.prior.sig(mh.cursigs[1])
-    A<-min(1,exp(num-den))
-    V<-runif(1)
-    ifelse(V<=A,mh.cursigs<-mh.newsigs,mh.newsigs<-mh.cursigs)    }
+    den <- og.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1])
+    A <- min(1, exp(num-den))
+    V <- runif(1)
+    ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)    
+  }
   # for shape                  
-  u<-rnorm(1,0,0.2)
-  mh.newsigs[2]<-mh.cursigs[2]+u
-  num<-log.lik.fct(c(mh.newsigs,rj.curparam)) + l.prior.sha(mh.newsigs[2])
-  den<-log.lik.fct(c(mh.cursigs,rj.curparam)) + l.prior.sha(mh.cursigs[2])
-  A<-min(1,exp(num-den))
-  V<-runif(1)
-  ifelse(V<=A,mh.cursigs<-mh.newsigs,mh.newsigs<-mh.cursigs)
+  u <- rnorm(1, 0, 0.2)
+  mh.newsigs[2] <- mh.cursigs[2] + u
+  num <- log.lik.fct(c(mh.newsigs,rj.curparam)) + l.prior.sha(mh.newsigs[2])
+  den <- log.lik.fct(c(mh.cursigs,rj.curparam)) + l.prior.sha(mh.cursigs[2])
+  A <- min(1, exp(num-den))
+  V <- runif(1)
+  ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)
   
   # for the year coefficients in the scale parameter: levels 2006 and 2007
   if(mh.cursigs[3]!=0){
@@ -712,8 +758,8 @@ for (i in 2:nt){
   # the intercept
   {u<-rnorm(1,0,0.08)                        
     newparam[1]<-curparam[1]+u
-    num<-log.lik.fct(newparam) + l.prior.int(newparam[1])
-    den<-log.lik.fct(curparam) + l.prior.int(curparam[1])
+    num<-log.lik.fct(newparam) + l.prior(newparam[1], -20, 7)
+    den<-log.lik.fct(curparam) + l.prior(curparam[1], -20, 7)
     A<-min(1,exp(num-den))
     V<-runif(1)
     ifelse(V<=A,curparam[1]<-newparam[1],newparam[1]<-curparam[1])
@@ -733,8 +779,8 @@ for (i in 2:nt){
   if(curparam[5]!=0){
     u<-rnorm(1,0,0.06)
     newparam[5]<-curparam[5]+u
-    num<-log.lik.fct(c(rj.cursigs,newparam)) + l.prior.type(newparam[5])
-    den<-log.lik.fct(c(rj.cursigs,curparam)) + l.prior.type(curparam[5])
+    num<-log.lik.fct(c(rj.cursigs,newparam)) + l.prior(newparam[5], -1, 1)
+    den<-log.lik.fct(c(rj.cursigs,curparam)) + l.prior(curparam[5], -1, 1)
     A<-min(1,exp(num-den))
     V<-runif(1)
     ifelse(V<=A,curparam[5]<-newparam[5],newparam[5]<-curparam[5])
@@ -743,45 +789,37 @@ for (i in 2:nt){
   if(curparam[6]!=0){
     u<-rnorm(1,0,0.02)
     newparam[6]<-curparam[6]+u
-    num<-log.lik.fct(c(rj.cursigs,newparam))    + l.prior.day(newparam[6])
-    den<-log.lik.fct(c(rj.cursigs,curparam))    + l.prior.day(curparam[6])
+    num<-log.lik.fct(c(rj.cursigs,newparam))    + l.prior(newparam[6], -1, 1)
+    den<-log.lik.fct(c(rj.cursigs,curparam))    + l.prior(curparam[6], -1, 1)
     A<-min(1,exp(num-den))
     V<-runif(1)
     ifelse(V<=A,curparam[6]<-newparam[6],newparam[6]<-curparam[6])
   }
   # the state coefficients 
-  ifelse(curparam[8]==0){
+  if (curparam[8]==0){
     for (m in 8:17){
       u<-rnorm(1,0,0.25)
       newparam[m]<-curparam[m]+u
-      num<-log.lik.fct(c(rj.cursigs,newparam))    + l.prior.1st(newparam[m])
-      den<-log.lik.fct(c(rj.cursigs,curparam))    + l.prior.1st(curparam[m])
+      num<-log.lik.fct(c(rj.cursigs,newparam))    + l.prior(newparam[m], -1, 1)
+      den<-log.lik.fct(c(rj.cursigs,curparam))    + l.priort(curparam[m], -1, 1)
       A<-min(1,exp(num-den))
       V<-runif(1)
       ifelse(V<=A,curparam[m]<-newparam[m],newparam[m]<-curparam[m])
-    } }  
-  # the random effect standard deviation
-  {u<-max(rnorm(1,0,0.08),-newparam[18])    # cannot become 0 or less
-    newparam[18]<-curparam[18]+u
-    num<-log.ran.fct(c(rj.cursigs,newparam))    + l.prior.std.ran(newparam[18])
-    den<-log.ran.fct(c(rj.cursigs,curparam))    + l.prior.std.ran(curparam[18])
-    A<-min(1,exp(num-den))
-    V<-runif(1)
-    ifelse(V<=A,curparam[18]<-newparam[18],newparam[18]<-curparam[18])
+    } 
   }
-  # the random effects coefficients
-  for (m in 19:(j+18)){
-    u<-rnorm(1,0,0.4)
-    newparam[m]<-curparam[m]+u
-    num<-log.lik.fct(c(rj.cursigs,newparam))
-    den<-log.lik.fct(c(rj.cursigs,curparam))
-    A<-min(1,exp(num-den))
-    V<-runif(1)
-    ifelse(V<=A,curparam[m]<-newparam[m],newparam[m]<-curparam[m])
-  }
+  # } else {  
+  #   # the random effect standard deviation
+  #   {u<-max(rnorm(1,0,0.08),-newparam[18])    # cannot become 0 or less
+  #   newparam[18]<-curparam[18]+u
+  #   num<-log.ran.fct(c(rj.cursigs,newparam))    + l.prior(newparam[18], -1, 1)
+  #   den<-log.ran.fct(c(rj.cursigs,curparam))    + l.prior(curparam[18], -1, 1)
+  #   A<-min(1,exp(num-den))
+  #   V<-runif(1)
+  #   ifelse(V<=A,curparam[18]<-newparam[18],newparam[18]<-curparam[18])
+  #   }
   
   # saving the new parameter values of the density model in count.param
-  count.param[i,]<-curparam[1:(j+18)]
+  count.param[i,]<-curparam
   
   rj.curparam<-curparam
   rj.newparam<-curparam
@@ -804,43 +842,15 @@ for (i in 2:nt){
 ###### Alterations to this algorithm: 
 # dis = distance (perpendicular for lines and radial for points, sigma = scale parameters, shape = shape parameter
 
-# using a half-normal detection function for point transects for f(y); \pi(y) * g(y|\bmath{\theta}) from eqn (2) is given by
-f.hn.function<-function(dis,sigma){
-  f <- 2*pi*dis*exp(-dis^2/(2*sigma^2))
-  return(f)
-}
-
 # using a half-normal detection function for line transects for f*y); g(y|\bmath{\theta}) from eqn (2) is given by (\pi(y) can be ommitted for line transects)
 f.hn.function <- function(dis,sigma) {
   f <- exp(-dis^2/(2*sigma^2))
   f
 }
 
-# using a hazard-rate function for point transects for f(y); \pi(y) * g(y|\bmath{\theta}) from eqn (2) is given by
-f.haz.function<-function(dis,sigma,shape) {
-  f <- 2*pi*dis*(1-exp(-(dis/sigma)^(-shape)))
-  return(f)
-}
 
 # using a hazard-rate function for line transects for f(y); g(y|\bmath{\theta}) from eqn (2) is given by (\pi(y) can be ommitted for line transects)
 f.haz.function<-function(dis,sigma,shape) {
   f <- 1-exp(-(dis/sigma)^(-shape))
   return(f)
-}
-
-# interval distance data: 
-# the fi's for interval data using half-normal detection function for lines or points
-# requires defining cutpoints for the intervals and the truncation distance w
-f.haz.int<-function(cutpoint1,cutpoint2,sigma,shape){
-  norm.const<-integrate(f.hn.function,0,w,sigma)$value
-  int.prob<-integrate(f.haz.function,cutpoint1,cutpoint2,sigma,shape)$value/norm.const
-  return(int.prob)
-}
-
-# the fi's for interval data using hazard-rate detection function for lines or points
-# requires defining cutpoints for the intervals and the truncation distance w
-f.haz.int<-function(cutpoint1,cutpoint2,sigma,shape){
-  norm.const<-integrate(f.haz.function,0,w,sigma,shape)$value
-  int.prob<-integrate(f.haz.function,cutpoint1,cutpoint2,sigma,shape)$value/norm.const
-  return(int.prob)
 }
