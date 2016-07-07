@@ -28,10 +28,11 @@ dat$Lat  <- as.numeric(as.character(dat$Lat))
 dat$Long <- as.numeric(as.character(dat$Long))
 dat <- dat[!is.na(dat$Lat), ]
 dat$Lat[dat$Lat > 0] <- dat$Lat[dat$Lat > 0]*-1
+dat$Transect <- as.numeric(dat$Date)
 
 dat_bot  <- dat[dat$Species == "BOT", ]
 dat_fish <- dat[dat$Species == "B", ]
-
+dat_fish <- dat_fish[dat_fish$Length.Size != "S", ]
 
 distAllCombinations <- function (lat1, lat2, long) {
   
@@ -93,15 +94,15 @@ apply(net_distance, 2, min, na.rm = TRUE) #some nets have other nets only 180m a
 
 #distance of each sighting to closest net
 sighting_to_net  <- distAllCombinations(dat_bot$Lat, nets$latitude, nets$longitude)
-hist(apply(sighting_to_net, 2, min, na.rm = TRUE), xlab = "min distance to net (m)")
+#hist(apply(sighting_to_net, 2, min, na.rm = TRUE), xlab = "min distance to net (m)")
 
 
 # ----------------------- SPATIAL ANALYSIS OF DOLPHINS AND NETS -------------------------#
 
-marked_points <- data.frame("longitude" = dat_bot$Long, "latitude" = dat_bot$Lat, "mark" = "dolphin")
-marked_points <- rbind(marked_points, data.frame("longitude" = dat_fish$Long, "latitude" = dat_fish$Lat, "mark" = "fish"))
-marked_points <- rbind(marked_points, data.frame("longitude" = nets$longitude, "latitude" = nets$latitude, "mark" = "net"))
-marked_points <- rbind(marked_points, data.frame("longitude" = no_nets$longitude, "latitude" = no_nets$latitude, "mark" = "no_net"))
+marked_points <- data.frame("longitude" = dat_bot$Long, "latitude" = dat_bot$Lat, "mark" = "dolphin", "seg" = dat_bot$Transect)
+marked_points <- rbind(marked_points, data.frame("longitude" = dat_fish$Long, "latitude" = dat_fish$Lat, "mark" = "fish", "seg" = dat_fish$Transect))
+#marked_points <- rbind(marked_points, data.frame("longitude" = nets$longitude, "latitude" = nets$latitude, "mark" = "net"), seg)
+#marked_points <- rbind(marked_points, data.frame("longitude" = no_nets$longitude, "latitude" = no_nets$latitude, "mark" = "no_net"))
 
 #convert to utm so units are in m
 xy = data.frame(marked_points$longitude, marked_points$latitude)
@@ -110,10 +111,36 @@ proj4string(xy) <- CRS("+proj=longlat +dat_botum=WGS84")
 marked_points[, 1:2] <- coordinates(spTransform(xy, CRS("+proj=utm +zone=53 ellps=WGS84")))
 
 
-transect_bounds <- ppp(x = rep(mean(marked_points$longitude), 2), y = c(min(marked_points$latitude), max(marked_points$latitude)), rep(mean(marked_points$longitude), 2), c(min(marked_points$latitude), max(marked_points$latitude)))
-transect_line <- linnet(vertices = transect_bounds, m = matrix(TRUE, nrow = 2, ncol = 2))
-marked_points$longitude <- mean(marked_points$longitude)
-point_network <- lpp(X = marked_points, L = transect_line) #check duplicated values
+#transect_bounds <- ppp(x = rep(mean(marked_points$longitude), 2), y = c(min(marked_points$latitude), max(marked_points$latitude)), rep(mean(marked_points$longitude), 2), c(min(marked_points$latitude), max(marked_points$latitude)))
+#transect_line <- linnet(vertices = transect_bounds, m = matrix(TRUE, nrow = 2, ncol = 2))
+#marked_points$longitude <- mean(marked_points$longitude)
+#point_network <- lpp(X = marked_points, L = transect_line) #check duplicated values
+
+#Single line segment for each transect
+
+marked_points$tp <- (marked_points$latitude - min(marked_points$latitude))/(max(marked_points$latitude) - min(marked_points$latitude))
+owin <- owin(xrange = c(mean(marked_points$longitude), mean(marked_points$longitude)+500), yrange = c(min(marked_points$latitude), max(marked_points$latitude)))
+transect_bounds <- ppp(x = rep(mean(marked_points$longitude), 47*2), y = rep(c(min(marked_points$latitude), max(marked_points$latitude)), 47), window = owin)
+jointed_vertices <- matrix(FALSE, nrow = 94, ncol = 94)
+pairs <- cbind(seq(1, 94, by = 2), seq(2, 94, by = 2))
+jointed_vertices[rbind(pairs, cbind(pairs[, 2], pairs[, 1]))] <- TRUE
+
+
+transect_line <- linnet(vertices = transect_bounds, m = jointed_vertices)
+marked_points$longitude <- mean(transect_bounds$x)
+names(marked_points) <- c("x", "y", "mark", "seg", "tp")
+point_network <- lpp(X = marked_points, L = transect_line)
+
+
+
+
+#dolphin fish school correlation
+pair_correlation <- linearpcfcross(point_network, "fish", "dolphin")
+plot(pair_correlation) 
+
+K <- linearKcross(point_network, "fish", "dolphin")
+plot(K)
+
 
 #linear K cross
 K <- linearKcross(point_network, "net", "dolphin")
@@ -136,11 +163,6 @@ marked_points$mark <- revalue(marked_points$mark, c(no_net = "beach", net = "bea
 point_network <- lpp(X = marked_points, L = transect_line) #check duplicated values
 
 pair_correlation <- linearpcfcross(point_network, "beach", "dolphin")
-plot(pair_correlation) 
-
-
-#dolphin fish school correlation
-pair_correlation <- linearpcfcross(point_network, "fish", "dolphin")
 plot(pair_correlation) 
 
 
