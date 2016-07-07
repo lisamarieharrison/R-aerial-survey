@@ -228,7 +228,7 @@ f.haz.function<-function(dis, sigma, shape) {
 l.prior.sig <- function(sigm) {
   log.u.sig<-array(NA,length(sigm))
   for (k in 1:length(sigm)) {
-    log.u.sig[k] <- log(dunif(sigm[k],1,100000))                                
+    log.u.sig[k] <- log(dunif(sigm[k], 1, 100000))                                
   }
   return(sum(log.u.sig))
 }
@@ -237,21 +237,12 @@ l.prior.sig <- function(sigm) {
 l.prior.sha<-function(shap){
   log.u.sha<-array(NA,length(shap))
   for (k in 1:length(shap)){
-    log.u<-log(dunif(shap[k],1,20))
-    ifelse(abs(log.u)==Inf,log.u.sha[k]<--100000,log.u.sha[k]<-log.u)}
+    log.u<-log(dunif(shap[k], 1, 20))
+    ifelse(abs(log.u) == Inf,log.u.sha[k]<- -100000, log.u.sha[k] <- log.u)}
   return(sum(log.u.sha))
 }
 
 #for scale coefficients
-#for type covariate
-l.prior.coeftyp<-function(coefsig){
-  lcs<-length(coefsig)
-  log.u.coefsig<-array(NA,lcs)
-  for (k in 1:lcs){
-    log.u<-log(dunif(coefsig[k],-3,3))
-    ifelse(abs(log.u)==Inf,log.u.coefsig[k]<- -100000,log.u.coefsig[k]<-log.u)}
-  return(sum(log.u.coefsig))}
-
 l.prior.coef<-function(coefsig){
   lcs<-length(coefsig)
   log.u.coefsig<-array(NA,lcs)
@@ -343,7 +334,10 @@ log.lik.fct <- function (p) {
   #     efa[strat,ty]<-integrate(f.haz.function,0,500,sig.msyt[strat,ty],sha2)$value}}
   
   for (i in 1:length(sig.msyt)) {
-    efa[i] <- integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value
+     tryCatch (
+     efa[i] <- integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
+    error = function(err) {
+      print(p)})
   }
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
@@ -393,6 +387,28 @@ match.function<-function(xmod,model.matrix){
     is.match.or.not[i]<-sum(xmod==model.matrix[i,])}
   result<-which(is.match.or.not==length(model.matrix[1,]))
   return(result)
+}
+
+#-------------------------------------------------------------------------------
+# LN: We want to be using the functions for line transects
+#-------------------------------------------------------------------------------
+
+#need to change to gamma detection function at some stage
+
+###### Alterations to this algorithm: 
+# dis = distance (perpendicular for lines and radial for points, sigma = scale parameters, shape = shape parameter
+
+# using a half-normal detection function for line transects for f*y); g(y|\bmath{\theta}) from eqn (2) is given by (\pi(y) can be ommitted for line transects)
+f.hn.function <- function(dis, sigma) {
+  f <- exp(-dis^2/(2*sigma^2))
+  f
+}
+
+
+# using a hazard-rate function for line transects for f(y); g(y|\bmath{\theta}) from eqn (2) is given by (\pi(y) can be ommitted for line transects)
+f.haz.function <- function(dis, sigma, shape) {
+  f <- 1-exp(-(dis/sigma)^(-shape))
+  return(f)
 }
 
 
@@ -607,7 +623,6 @@ for (i in 2:nt) {
       for (m in indeces){
         u<-rnorm(1, 0, 0.25)
         newparam[m] <- curparam[m]+u
-        p <- c(rj.cursigs,newparam)
         num <- log.lik.fct(c(rj.cursigs,newparam)) + l.prior(newparam[m], -1, 1)
         den <- log.lik.fct(c(rj.cursigs,curparam)) + l.prior(curparam[m], -1, 1)
         A <- min(1, exp(num - den))
@@ -658,24 +673,3 @@ for (i in 2:nt) {
 } # end of iteration
 
 
-#-------------------------------------------------------------------------------
-# LN: We want to be using the functions for line transects
-#-------------------------------------------------------------------------------
-
-#need to change to gamma detection function at some stage
-
-###### Alterations to this algorithm: 
-# dis = distance (perpendicular for lines and radial for points, sigma = scale parameters, shape = shape parameter
-
-# using a half-normal detection function for line transects for f*y); g(y|\bmath{\theta}) from eqn (2) is given by (\pi(y) can be ommitted for line transects)
-f.hn.function <- function(dis, sigma) {
-  f <- exp(-dis^2/(2*sigma^2))
-  f
-}
-
-
-# using a hazard-rate function for line transects for f(y); g(y|\bmath{\theta}) from eqn (2) is given by (\pi(y) can be ommitted for line transects)
-f.haz.function <- function(dis, sigma, shape) {
-  f <- 1-exp(-(dis/sigma)^(-shape))
-  return(f)
-}
