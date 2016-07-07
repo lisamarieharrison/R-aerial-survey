@@ -36,6 +36,7 @@ covey.d$Year <- as.numeric(substr(covey.d$Date, nchar(covey.d$Date) - 3, nchar(c
 names(covey.d) <- c("Date", "Season", "Distance", "Sea_state", "Cloud_cover", "Water_clarity", "Year")
 covey.d$Id <- 1:nrow(covey.d)
 covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
+covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
 
 length.d <- length(covey.d$Distance)
 
@@ -106,10 +107,11 @@ shape0 <- 2.5
 
 #  count model parameters: intercept and random effect standard deviation for L_n(\bmath{\beta}|\bmath{\theta}) (eqn (6))
 int0 <- -13
-#std.ran0 <- 1
+std.ran0 <- 1
 
 # the random effect coefficients b_j
 # LN: We only have one site, so can't really use this
+#could try using visit as random effect
 #b0<-rnorm(j,0,std.ran0)
 
 
@@ -117,7 +119,8 @@ int0 <- -13
 # setting up the matrices that will contain the paramter values;
 
 # number of iterations
-nt <- 100000
+#nt <- 100000
+nt <- 10 #fewer iterations for testing
 
 #-------------------------------------------------------------------------
 # LN: Indexing here is specific to the case study
@@ -128,10 +131,10 @@ nt <- 100000
 # holds the values for detection function parameters for each iteration
 # 15 colums due to 15 parameters in full model: hazard-rate det fct with covariates: year, type and state
 # we have 23 parameters: scale, shape, year(3), season(3), sea_state(3), cloud(9), water_clarity(3)
-det.param <- matrix(NA, nt+1, 23)
+det.param <- matrix(NA, nt+1, 18)
 
 # for an intercept only model:
-det.param[1, ] <- c(scale0, shape0, rep(0, 21))
+det.param[1, ] <- c(scale0, shape0, rep(0, 16))
 
 # holds the model id number for detection function for each iteration, 
 det.model <- matrix(NA, nt+1, 1)            # refers to det.list
@@ -149,13 +152,13 @@ count.model <- matrix(NA, nt+1, 1)          # refers to count.list
 # proposal distributions for detection function parameters:
 
 # 1. for main analysis and prior sensitivity analysis
-det.prop.mean <- c(138.60, 3.00, rnorm(21, 0, 1))
-det.prop.sd <- c(1.41, 0.84, rep(0.1,21))
+det.prop.mean <- c(138.60, 3.00, rnorm(16, 0, 1))
+det.prop.sd <- c(1.41, 0.84, rep(0.1, 16))
 
 # proposal distribution for the fixed effect density model parameters
 # 1. for covey data
-count.prop.mean <- c(-13.06, 0, rnorm(22, 0, 1))
-count.prop.sd <- c(0.30, 0, rep(0.1,22))
+count.prop.mean <- c(-13.06, 0, rnorm(21, 0, 1))
+count.prop.sd <- c(0.30, 0, rep(0.1, 21))
 
 msyt.prop.mean <- c(1, rep(0.5, 21))
 msyt.prop.sd <- rep(0.5, 22)
@@ -179,20 +182,22 @@ rj.curparam <- count.param[1, 1:22]
 # LN: This will change since we will define our own models
 #-------------------------------------------------------------------
 # model identifier for detection function, model number in rows, parameters (y/n) in columns
-det.list <- matrix(NA, 8, 18)
+det.list <- matrix(NA, 9, 18)
 colnames(det.list) <- c("sig","sha", "year2013", "year2014", "seasonSummer", "seasonSpring", paste0("s", 1:2),  paste0("cc", 0:7), paste0("wc", 1:2))
-det.list[1,] <-c(rep(1, 4), rep(0, 14))                # mcds with year 
-det.list[2,] <-c(1, 1, 0, 0, 1, 1, rep(0, 12))   # mcds with season
-det.list[3,] <-c(rep(1, 6), rep(0, 12))                # mcds with year and season
-det.list[4,] <-c(1, 1, rep(0, 4), 1, 1, rep(0, 10)) # mcds with sea state
-det.list[5,] <-c(1, 1, rep(0, 16))                        # global hazard rate model
-det.list[6,] <-c(1, 1, rep(1, 16))                        # mcds with all variables
-det.list[7,] <-c(1, 1, rep(0, 14), 1, 1)            # mcds with water clarity
-det.list[8,] <-c(1, 1, rep(0, 6), rep(1, 8), 0, 0)  # mcds with cloud cover
+det.list[1, ] <-c(rep(1, 4), rep(0, 14))                # mcds with year 
+det.list[2, ] <-c(1, 1, 0, 0, 1, 1, rep(0, 12))         # mcds with season
+det.list[3, ] <-c(1, 1, rep(0, 4), 1, 1, rep(0, 10))    # mcds with sea state
+det.list[4, ] <-c(1, 1, rep(0, 14), 1, 1)               # mcds with water clarity
+det.list[5, ] <-c(1, 1, rep(0, 6), rep(1, 8), 0, 0)     # mcds with cloud cover
+det.list[6, ] <-c(rep(1, 6), rep(0, 12))                # mcds with year and season
+det.list[7, ] <-c(rep(1, 8), rep(0, 10))                # mcds with year, season and sea state
+det.list[8, ] <-c(1, 1, rep(0, 16))                     # global hazard rate model
+det.list[9, ] <-c(1, 1, rep(1, 16))                     # mcds with all variables
+
 
 # model identifier for density model, model number in rows, parameters (y/n) in columns
 count.list <- matrix(NA, 8, 22)
-colnames(count.list)<-c("int", "year2013", "year2014", "year2015", "seasonSummer", "seasonSpring", "seasonAutumn", paste0("s", 1:3),  paste0("cc", 0:8), paste0("wc", 1:3))
+colnames(count.list)<-c("int", "year2013", "year2014", "year2015", "seasonSummer", "seasonSpring", "seasonAutumn", paste0("ss", 1:3),  paste0("cc", 0:8), paste0("wc", 1:3))
 count.list[1, ] <- c(rep(1, 4), rep(0, 18))                # year 
 count.list[2, ] <- c(1, 0, 0, 0, 1, 1, 1, rep(0, 15))      # season
 count.list[3, ] <- c(rep(1, 7), rep(0, 15))                # year and season
@@ -254,6 +259,13 @@ l.prior.coef<-function(coefsig){
     log.u<-log(dunif(coefsig[k],-2.5,2.5))
     ifelse(abs(log.u)==Inf,log.u.coefsig[k]<- -100000,log.u.coefsig[k]<-log.u)}
   return(sum(log.u.coefsig))}
+
+# prior for random effect standard deviation (std.ran)
+l.prior.std.ran <- function (std.ran) {
+  l.u.std.ran <- log(dunif(std.ran, 0, 2))
+  return(l.u.std.ran)
+}
+
 
 ### the priors for density model parameters
 
@@ -331,7 +343,7 @@ log.lik.fct <- function (p) {
   #     efa[strat,ty]<-integrate(f.haz.function,0,500,sig.msyt[strat,ty],sha2)$value}}
   
   for (i in 1:length(sig.msyt)) {
-    efa[i] <- integrate(f.haz.function,0,500,sig.msyt[i], sha2)$value
+    efa[i] <- integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value
   }
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
@@ -344,7 +356,7 @@ log.lik.fct <- function (p) {
                          combns$wc == covey.d$Water_clarity[i])
     
     norm.const <- efa[combn_row]    # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
-    fe[i] <- log(f.haz.function(covey.d$Distance[i],sig.msyt[combn_row], sha2)/norm.const)
+    fe[i] <- log(f.haz.function(covey.d$Distance[i], sig.msyt[combn_row], sha2)/norm.const)
     
     offset[i] <- norm.const
     
@@ -364,10 +376,8 @@ log.lik.fct <- function (p) {
   # for each observation 
   for (i in 1:length.d){
     lambda[i] <- exp(int + yea[which(years == covey.d$Year[i])] + sea[which(seasons == covey.d$Season[i])] + ss[which(sea_states == covey.d$Sea_state[i])]  + cc[which(cloud_covers == covey.d$Cloud_cover[i])] +  wc[which(water_claritys == covey.d$Water_clarity[i])] + log(offset[i]))
-    l.pois.y[i] <- log(dpois(table(covey.d$Visit)[covey.d$Visit[i]], lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
+    l.pois.y[i] <- log(dpois(sum(covey.d$Visit == covey.d$Visit[i]), lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
   }
-  
-  
   
   post <- sum(fe) + sum(l.pois.y[!is.na(l.pois.y)])
   return(post)
@@ -408,27 +418,26 @@ for (i in 2:nt) {
   rj.newsigs <- rj.cursigs
   
   # going through the list of coefficients to check whether to add or remove one
-  # year coefficient
   
   for (param in c("year", "season", "ss", "cc", "wc")) {
     
-    indeces <- grep(param, names(cur.par))
+    indeces <- grep(param, names(curpa))
     
     
     if (sum(curpa[indeces]) == 0) {        # if year is not currently in the model, propose to add it
       newpa[indeces] <- 1
-      rj.newsigs[indeces] <- rnorm(2, det.prop.mean[indeces], det.prop.sd[indeces])   # draw random samples from proposal distributions
+      rj.newsigs[indeces] <- rnorm(length(indeces), det.prop.mean[indeces], det.prop.sd[indeces])   # draw random samples from proposal distributions
       # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
       num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior.coef(rj.newsigs[indeces])
       # the denominator of eqn (11)
-      den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newsigs[indeces],msyt.prop.mean[indeces],msyt.prop.sd[indeces])))
+      den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newsigs[indeces], msyt.prop.mean[indeces],msyt.prop.sd[indeces])))
     } else {
       newpa[indeces] <- 0               # if year is in the current model, propose to delete it
       rj.newsigs[indeces] <- 0
       # the numerator of eqn (11)
-      num <- log.lik.fct(c(rj.newsigs,rj.curparam)) + sum(log(dnorm(rj.cursigs[indeces],msyt.prop.mean[indeces],msyt.prop.sd[indeces])))
+      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + sum(log(dnorm(rj.cursigs[indeces], msyt.prop.mean[indeces],msyt.prop.sd[indeces])))
       # the denominator of eqn (11)
-      den <- log.lik.fct(c(rj.cursigs,rj.curparam))+ l.prior.coef(rj.cursigs[indeces])
+      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior.coef(rj.cursigs[indeces])
     }
     
     #check whether the new model is accepted
@@ -445,9 +454,17 @@ for (i in 2:nt) {
   }
   
   # which model did we end up with 
-  cur.dmod<-match.function(curpa,det.list)
+  cur.dmod <- match.function(curpa, det.list)
+  
+  #if model doesn't exist in our subset of chosen models, go back to the previous model
+  #probably not the right thing to do in this situation
+  if (length(cur.dmod) == 0) {
+    cur.dmod <- det.model[i - 1]
+  }
+  
   # record the model selection for the det fct in det.model for the i'th iteration
-  det.model[i]<-cur.dmod
+  det.model[i] <- cur.dmod
+  
   
   #################### RJ step for density model ##################################
   rj.newparam<-rj.curparam
@@ -502,7 +519,13 @@ for (i in 2:nt) {
   }
   
   # which model did we end up with:
-  cur.mod<-match.function(cur.par, count.list)
+  cur.mod <- match.function(cur.par, count.list)
+  
+  #if chosen model is not in the our list of possible models, go back to previous model
+  if (length(cur.mod) == 0) {
+    cur.mod <- count.model[i - 1]
+  }
+  
   count.model[i] <- cur.mod
   
   ########################## Metropolis Hastings update ########################################################
@@ -519,7 +542,7 @@ for (i in 2:nt) {
     # the numerator of eqn (8)   (LN: This is is A.1)
     num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1])
     # the denominator of eqn (8)
-    den <- og.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1])
+    den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1])
     A <- min(1, exp(num-den))
     V <- runif(1)
     ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)    
@@ -538,7 +561,7 @@ for (i in 2:nt) {
   
   for (param in c("year", "season", "ss", "cc", "wc")) {
     
-    indeces <- grep(param, names(cur.par))
+    indeces <- grep(param, names(mh.cursigs))
     
     if (sum(mh.cursigs[indeces]) != 0) {
       for (ip in indeces) {
@@ -574,38 +597,7 @@ for (i in 2:nt) {
   V<-runif(1)
   ifelse(V<=A,curparam[1]<-newparam[1],newparam[1]<-curparam[1])
   
-  # the year coefficients:           
-  if(curparam[3]!=0){
-    for (m in 3:4){
-      u<-rnorm(1,0,0.1)
-      newparam[m]<-curparam[m]+u
-      num<-log.lik.fct(c(rj.cursigs,newparam)) + l.prior.year1(newparam[m])
-      den<-log.lik.fct(c(rj.cursigs,curparam)) + l.prior.year1(curparam[m])
-      A<-min(1,exp(num-den))
-      V<-runif(1)
-      ifelse(V<=A,curparam[m]<-newparam[m],newparam[m]<-curparam[m])
-    }}
-  # the type coefficient
-  if(curparam[5]!=0){
-    u<-rnorm(1,0,0.06)
-    newparam[5]<-curparam[5]+u
-    num<-log.lik.fct(c(rj.cursigs,newparam)) + l.prior(newparam[5], -1, 1)
-    den<-log.lik.fct(c(rj.cursigs,curparam)) + l.prior(curparam[5], -1, 1)
-    A<-min(1,exp(num-den))
-    V<-runif(1)
-    ifelse(V<=A,curparam[5]<-newparam[5],newparam[5]<-curparam[5])
-  }
-  # day coefficient
-  if(curparam[6]!=0){
-    u<-rnorm(1,0,0.02)
-    newparam[6]<-curparam[6]+u
-    num<-log.lik.fct(c(rj.cursigs,newparam))    + l.prior(newparam[6], -1, 1)
-    den<-log.lik.fct(c(rj.cursigs,curparam))    + l.prior(curparam[6], -1, 1)
-    A<-min(1,exp(num-den))
-    V<-runif(1)
-    ifelse(V<=A,curparam[6]<-newparam[6],newparam[6]<-curparam[6])
-  }
-  # the state coefficients 
+  # loop through each parameter
   
   for (param in c("year", "season", "ss", "cc", "wc")) {
     
@@ -614,9 +606,10 @@ for (i in 2:nt) {
     if (sum(curparam[indeces]) == 0){
       for (m in indeces){
         u<-rnorm(1, 0, 0.25)
-        newparam[m]<-curparam[m]+u
-        num<-log.lik.fct(c(rj.cursigs,newparam))    + l.prior(newparam[m], -1, 1)
-        den<-log.lik.fct(c(rj.cursigs,curparam))    + l.priort(curparam[m], -1, 1)
+        newparam[m] <- curparam[m]+u
+        p <- c(rj.cursigs,newparam)
+        num <- log.lik.fct(c(rj.cursigs,newparam)) + l.prior(newparam[m], -1, 1)
+        den <- log.lik.fct(c(rj.cursigs,curparam)) + l.prior(curparam[m], -1, 1)
         A <- min(1, exp(num - den))
         V <- runif(1)
         ifelse(V <= A, curparam[m] <- newparam[m], newparam[m] <- curparam[m])
@@ -626,13 +619,14 @@ for (i in 2:nt) {
   
   # the random effect standard deviation
   #change 18 to correct index for random effect standard deviation
-  u<-max(rnorm(1, 0, 0.08), -newparam[18])    # cannot become 0 or less
-  newparam[18] <- curparam[18]+u
-  num<-log.ran.fct(c(rj.cursigs,newparam)) + l.prior.std.ran(newparam[18])
-  den<-log.ran.fct(c(rj.cursigs,curparam)) + l.prior.std.ran(curparam[18])
-  A<-min(1,exp(num-den))
-  V<-runif(1)
-  ifelse(V<=A,curparam[18]<-newparam[18],newparam[18]<-curparam[18])
+  sd_index <- length(newparam)
+  u <- max(rnorm(1, 0, 0.08), -newparam[sd_index])    # cannot become 0 or less
+  newparam[sd_index] <- curparam[sd_index]+u
+  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+  A <- min(1, exp(num-den))
+  V <- runif(1)
+  ifelse(V <= A, curparam[sd_index] <- newparam[sd_index], newparam[sd_index] <- curparam[sd_index])
   
   #commented out for now but will add random effect for visit later
   # the random effects coefficients
@@ -645,7 +639,7 @@ for (i in 2:nt) {
   #   V<-runif(1)
   #   ifelse(V<=A,curparam[m]<-newparam[m],newparam[m]<-curparam[m])
   # }
-   
+  
   
   # saving the new parameter values of the density model in count.param
   count.param[i, ] <- curparam
