@@ -65,6 +65,7 @@ visits         <- sort(unique(covey.d$Visit))
 j  <- length(visits)
 Y <- table(covey.d$Visit) #count per visit
 
+line_length <- 26500 #m
 
 # matrix that will hold the counts n.jpr for each visit (1 row per site)
 #Y <- matrix(NA, j, max(Tj))
@@ -335,7 +336,7 @@ log.lik.fct <- function (p) {
   
   for (i in 1:length(sig.msyt)) {
      tryCatch (
-     efa[i] <- integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
+     efa[i] <- 2*line_length*integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
     error = function(err) {
       print(p)})
   }
@@ -360,10 +361,9 @@ log.lik.fct <- function (p) {
   l.pois.y <- NULL  # matrix that will hold the Poisson likelihood for each observation n_jpr
   lambda   <- NULL     # matrix for storing the lambda_jpr from eqn (6)
   # for each visit 
-  for (i in visits) {
+  for (i in 1:length(visits)) {
     
     count_i <- sum(covey.d$Visit == i) #count for visit i
-    
     if (count_i == 0) {
       lambda[i] <- exp(int) #if 0 count on visit i, use only intercept
     } else {
