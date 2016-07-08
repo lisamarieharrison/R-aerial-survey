@@ -121,7 +121,7 @@ std.ran0 <- 1
 
 # number of iterations
 #nt <- 100000
-nt <- 50 #fewer iterations for testing
+nt <- 200 #fewer iterations for testing
 
 #-------------------------------------------------------------------------
 # LN: Indexing here is specific to the case study
@@ -302,7 +302,7 @@ log.lik.fct <- function (p) {
   
   for (i in 1:length(sig.msyt)) {
     tryCatch (
-      efa[i] <- 2*line_length*integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
+      efa[i] <- 2*line_length*integrate(f.haz.function, 0, max(covey.d$Distance), sig.msyt[i], sha2)$value, #change max(distance) to truncation distance is there is one
       error = function(err) {
         print(paste0("Warning: couldn't calculate integral of f.haz.function"))})
   }
@@ -573,7 +573,6 @@ for (i in 2:nt) {
     
     if (sum(mh.cursigs[indeces]) != 0) { #only update parameters in the current model
       for (ip in indeces) {
-        #u<-rnorm(1,0,0.01)          # acc prob = 80-95%
         u <- rnorm(1, 0, 0.12)
         mh.newsigs[ip]<-mh.cursigs[ip] + u
         num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior(mh.newsigs[ip], -1, 1)
@@ -663,5 +662,25 @@ for (i in 2:nt) {
   }
   
 } # end of iteration
+
+
+
+
+
+
+hist.obj <- hist(covey.d$Distance)
+
+nc <- length(hist.obj$mids)
+pa <- integrate(f.haz.function, 0, max(covey.d$Distance), det.param[nrow(det.param) - 1, 1], det.param[nrow(det.param) - 1, 2])$value/max(covey.d$Distance)
+Nhat <- nrow(covey.d)/pa
+expected.counts <- (breaks[2:(nc+1)]-breaks[1:nc])*(Nhat/breaks[nc+1])
+
+hist.obj$density <- hist.obj$counts/expected.counts
+hist.obj$density[expected.counts==0] <- 0
+hist.obj$equidist <- FALSE
+
+plot(hist.obj)
+points(f.haz.function(0:max(covey.d$Distance), det.param[nrow(det.param) - 1, 1], det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
+
 
 
