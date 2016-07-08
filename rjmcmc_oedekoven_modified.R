@@ -356,21 +356,20 @@ log.lik.fct <- function (p) {
     
   }
   
-  # 4. arrange the offset from the current det model in a matrix for each observed count n.jpr in matrix Y (the \nu_{jpr} from eqn(6)):
-  # offset<-matrix(NA, j, max(Tj))
-  # for (v in covey.d$Visit){
-  # 
-  #     offset[is,ts] <-efa[combn$year]
-  #   }
-  
   # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
-  l.pois.y <- c(NA, length.d)  # matrix that will hold the Poisson likelihood for each observation n_jpr
-  lambda <- c(NA, length.d)     # matrix for storing the lambda_jpr from eqn (6)
-  
-  # for each observation 
-  for (i in 1:length.d){
-    lambda[i] <- exp(int + yea[which(years == covey.d$Year[i])] + sea[which(seasons == covey.d$Season[i])] + ss[which(sea_states == covey.d$Sea_state[i])]  + cc[which(cloud_covers == covey.d$Cloud_cover[i])] +  wc[which(water_claritys == covey.d$Water_clarity[i])] + log(offset[i]))
-    l.pois.y[i] <- log(dpois(sum(covey.d$Visit == covey.d$Visit[i]), lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
+  l.pois.y <- NULL  # matrix that will hold the Poisson likelihood for each observation n_jpr
+  lambda   <- NULL     # matrix for storing the lambda_jpr from eqn (6)
+  # for each visit 
+  for (i in visits) {
+    
+    count_i <- sum(covey.d$Visit == i) #count for visit i
+    
+    if (count_i == 0) {
+      lambda[i] <- exp(int) #if 0 count on visit i, use only intercept
+    } else {
+      lambda[i] <- exp(int + yea[which(years == unique(covey.d$Year[covey.d$Visit == i]))] + sea[which(seasons == unique(covey.d$Season[covey.d$Visit == i]))] + log(mean(offset[covey.d$Visit == i])))
+    }
+    l.pois.y[i] <- log(dpois(count_i, lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
   }
   
   post <- sum(fe) + sum(l.pois.y[!is.na(l.pois.y)])
@@ -381,11 +380,11 @@ log.lik.fct <- function (p) {
 ################################# other function you will need
 # this function matches a string of numbers against rows a matrix
 # and will return the row number of matrix that matches the string exactly
-match.function<-function(xmod,model.matrix){
-  is.match.or.not<-array(NA,length(model.matrix[,1]))
-  for (i in 1:length(model.matrix[,1])){
-    is.match.or.not[i]<-sum(xmod==model.matrix[i,])}
-  result<-which(is.match.or.not==length(model.matrix[1,]))
+match.function <- function (xmod,model.matrix) {
+  is.match.or.not <- array(NA, length(model.matrix[, 1]))
+  for (i in 1:length(model.matrix[, 1])) { 
+    is.match.or.not[i] <- sum(xmod == model.matrix[i, ])}
+  result <- which(is.match.or.not == length(model.matrix[1, ]))
   return(result)
 }
 
@@ -427,8 +426,8 @@ for (i in 2:nt) {
   #--------------------------------------------------
   
   # the current model
-  cur.dmod <- det.model[i-1]
-  curpa <- det.list[cur.dmod,]
+  cur.dmod <- det.model[i - 1]
+  curpa <- det.list[cur.dmod, ]
   # setting the parameters for the new model equal to the current model
   newpa <- curpa
   rj.newsigs <- rj.cursigs
@@ -440,20 +439,16 @@ for (i in 2:nt) {
     indeces <- grep(param, names(curpa))
     
     
-    if (sum(curpa[indeces]) == 0) {        # if year is not currently in the model, propose to add it
+    if (sum(curpa[indeces]) == 0) {        # if param is not currently in the model, propose to add it
       newpa[indeces] <- 1
       rj.newsigs[indeces] <- rnorm(length(indeces), det.prop.mean[indeces], det.prop.sd[indeces])   # draw random samples from proposal distributions
-      # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
-      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior.coef(rj.newsigs[indeces])
-      # the denominator of eqn (11)
-      den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + sum(log(dnorm(rj.newsigs[indeces], msyt.prop.mean[indeces],msyt.prop.sd[indeces])))
+      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior.coef(rj.newsigs[indeces]) # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
+      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the denominator of eqn (11)
     } else {
-      newpa[indeces] <- 0               # if year is in the current model, propose to delete it
+      newpa[indeces] <- 0               # if param is in the current model, propose to delete it
       rj.newsigs[indeces] <- 0
-      # the numerator of eqn (11)
-      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + sum(log(dnorm(rj.cursigs[indeces], msyt.prop.mean[indeces],msyt.prop.sd[indeces])))
-      # the denominator of eqn (11)
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior.coef(rj.cursigs[indeces])
+      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + sum(log(dnorm(rj.cursigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the numerator of eqn (11)
+      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior.coef(rj.cursigs[indeces]) # the denominator of eqn (11)
     }
     
     #check whether the new model is accepted
@@ -483,12 +478,12 @@ for (i in 2:nt) {
   
   
   #################### RJ step for density model ##################################
-  rj.newparam<-rj.curparam
+  rj.newparam <- rj.curparam
   # the current model:
-  cur.mod<-count.model[i-1]
+  cur.mod <- count.model[i - 1]
   # the parameters in the current model
-  cur.par<-count.list[cur.mod,]
-  new.par<-cur.par
+  cur.par <- count.list[cur.mod, ]
+  new.par <- cur.par
   
   # for each parameter, check if it is in the current model 
   
@@ -508,21 +503,21 @@ for (i in 2:nt) {
       den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[indeces], count.prop.mean[indeces], count.prop.sd[indeces])))
       
       #check if the new model is accepted
-      A <- min(1, exp(num-den))
+      A <- min(1, exp(num - den))
       V <- runif(1)
       if (V <= A) {                             
         rj.curparam <- rj.newparam   #if accepted, update current model            
         cur.par <- new.par
       } else {                             
-        rj.newparam<-rj.curparam     #if rejected, reset parameters
-        new.par<-cur.par
+        rj.newparam <- rj.curparam     #if rejected, reset parameters
+        new.par <- cur.par
       }
     } else {
       rj.newparam[indeces] <- 0         # if param is in the current model, propose to delete it
       new.par[indeces] <- 0
       num <- log.lik.fct(c(rj.cursigs,rj.newparam))  + sum(log(dnorm(rj.curparam[indeces],count.prop.mean[indeces],count.prop.sd[indeces])))
       den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior(rj.curparam[indeces], -1, 1) 
-      A <- min(1, exp(num-den))
+      A <- min(1, exp(num - den))
       V <- runif(1)
       if ( V <= A) {                             
         rj.curparam <- rj.newparam               
@@ -567,8 +562,8 @@ for (i in 2:nt) {
   # for shape                  
   u <- rnorm(1, 0, 0.2)
   mh.newsigs[2] <- mh.cursigs[2] + u
-  num <- log.lik.fct(c(mh.newsigs,rj.curparam)) + l.prior.sha(mh.newsigs[2])
-  den <- log.lik.fct(c(mh.cursigs,rj.curparam)) + l.prior.sha(mh.cursigs[2])
+  num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
+  den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
   A <- min(1, exp(num-den))
   V <- runif(1)
   ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)
@@ -579,7 +574,7 @@ for (i in 2:nt) {
     
     indeces <- grep(param, names(mh.cursigs))
     
-    if (sum(mh.cursigs[indeces]) != 0) {
+    if (sum(mh.cursigs[indeces]) != 0) { #only update parameters in the current model
       for (ip in indeces) {
         #u<-rnorm(1,0,0.01)          # acc prob = 80-95%
         u <- rnorm(1,0,0.12)
@@ -588,7 +583,7 @@ for (i in 2:nt) {
         den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.coef(mh.cursigs[ip])
         A <- min(1, exp(num - den))
         V <- runif(1)
-        ifelse(V <= A,mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)
+        ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)
       }
     }
   }
@@ -606,12 +601,12 @@ for (i in 2:nt) {
   
   # the intercept
   u <- rnorm(1,0,0.08)                        
-  newparam[1]<-curparam[1]+u
-  num<-log.lik.fct(newparam) + l.prior(newparam[1], -20, 7)
-  den<-log.lik.fct(curparam) + l.prior(curparam[1], -20, 7)
-  A<-min(1,exp(num-den))
-  V<-runif(1)
-  ifelse(V<=A,curparam[1]<-newparam[1],newparam[1]<-curparam[1])
+  newparam[1] <- curparam[1] + u
+  num <- log.lik.fct(newparam) + l.prior(newparam[1], -20, 7)
+  den <- log.lik.fct(curparam) + l.prior(curparam[1], -20, 7)
+  A <- min(1, exp(num - den))
+  V <- runif(1)
+  ifelse(V <= A, curparam[1] <- newparam[1], newparam[1] <- curparam[1])
   
   # loop through each parameter
   
@@ -619,10 +614,10 @@ for (i in 2:nt) {
     
     indeces <- grep(param, names(cur.par))
     
-    if (sum(curparam[indeces]) == 0){
+    if (sum(curparam[indeces]) == 0){ #only update parameters in the current model
       for (m in indeces){
         u<-rnorm(1, 0, 0.25)
-        newparam[m] <- curparam[m]+u
+        newparam[m] <- curparam[m] + u
         num <- log.lik.fct(c(rj.cursigs,newparam)) + l.prior(newparam[m], -1, 1)
         den <- log.lik.fct(c(rj.cursigs,curparam)) + l.prior(curparam[m], -1, 1)
         A <- min(1, exp(num - den))
@@ -663,11 +658,11 @@ for (i in 2:nt) {
   rj.newparam <- curparam
   
   # saving the parameter matrices ever 1000 iterations
-  if (!is.na(match(i, seq(0, 200000, 1000)) == T)) {
-    save(det.model,file='det.model.RData')
-    save(count.model,file='count.model.RData')
-    save(det.param,file='msyt.param.RData')
-    save(count.param,file='count.param.RData')
+  if (i %% 1000 == 0) {
+    save(det.model, file = 'det.model.RData')
+    save(count.model, file = 'count.model.RData')
+    save(det.param, file = 'msyt.param.RData')
+    save(count.param, file = 'count.param.RData')
   }
   
 } # end of iteration
