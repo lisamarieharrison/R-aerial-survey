@@ -667,20 +667,30 @@ for (i in 2:nt) {
 
 
 
+#plot detection function over histogram of distances
+#distances scaled by expected count
 
 hist.obj <- hist(covey.d$Distance)
 
 nc <- length(hist.obj$mids)
 pa <- integrate(f.haz.function, 0, max(covey.d$Distance), det.param[nrow(det.param) - 1, 1], det.param[nrow(det.param) - 1, 2])$value/max(covey.d$Distance)
 Nhat <- nrow(covey.d)/pa
+breaks <- hist.obj$breaks
 expected.counts <- (breaks[2:(nc+1)]-breaks[1:nc])*(Nhat/breaks[nc+1])
 
 hist.obj$density <- hist.obj$counts/expected.counts
 hist.obj$density[expected.counts==0] <- 0
 hist.obj$equidist <- FALSE
 
+#calculate scale averaged across all parameter levels
+calc_scale <- det.param[nrow(det.param) - 1, 1] * exp(mean(c(0, det.param[nrow(det.param) - 1, 3:4])) +
+                         mean(c(0, det.param[nrow(det.param) - 1, 5:6])) +
+                         mean(c(0, det.param[nrow(det.param) - 1, 7:8])) +
+                         mean(c(0, det.param[nrow(det.param) - 1, 9:16])) +
+                         mean(c(0, det.param[nrow(det.param) - 1, 17:18])))
+
 plot(hist.obj)
-points(f.haz.function(0:max(covey.d$Distance), det.param[nrow(det.param) - 1, 1], det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
+points(f.haz.function(0:max(covey.d$Distance), calc_scale, det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
 
 
 
