@@ -320,7 +320,7 @@ log.lik.fct <- function (p) {
     tryCatch (
       efa[i] <- 2*line_length*integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
       error = function(err) {
-        print(paste0("Warning: couldn't calculate integral of f.haz.function: ", p))})
+        print(paste0("Warning: couldn't calculate integral of f.haz.function: ", i, sig1))})
   }
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
@@ -493,15 +493,15 @@ for (i in 2:nt) {
     } else {
       rj.newparam[indeces] <- 0         # if param is in the current model, propose to delete it
       new.par[indeces] <- 0
-      num <- log.lik.fct(c(rj.cursigs,rj.newparam))  + sum(log(dnorm(rj.curparam[indeces],count.prop.mean[indeces],count.prop.sd[indeces])))
-      den <- log.lik.fct(c(rj.cursigs,rj.curparam)) + l.prior(rj.curparam[indeces], -1, 1) 
+      num <- log.lik.fct(c(rj.cursigs, rj.newparam))  + sum(log(dnorm(rj.curparam[indeces],count.prop.mean[indeces],count.prop.sd[indeces])))
+      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior(rj.curparam[indeces], -1, 1) 
       A <- min(1, exp(num - den))
       V <- runif(1)
       if ( V <= A) {                             
-        rj.curparam <- rj.newparam               
+        rj.curparam <- rj.newparam     #if accepted, update current model            
         cur.par <- new.par
       } else {                             
-        rj.newparam <- rj.curparam
+        rj.newparam <- rj.curparam  #if rejected, reset parameters
         new.par <- cur.par
       }
     }  
@@ -580,8 +580,8 @@ for (i in 2:nt) {
   # the intercept
   u <- rnorm(1,0,0.08)                        
   newparam[1] <- curparam[1] + u
-  num <- log.lik.fct(newparam) + l.prior(newparam[1], -20, 7)
-  den <- log.lik.fct(curparam) + l.prior(curparam[1], -20, 7)
+  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -20, 7) #changed newparam to c(rj.cursigs, newparam)
+  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -20, 7) #changed curparam to c(rj.cursigs, curparam)
   A <- min(1, exp(num - den))
   V <- runif(1)
   ifelse(V <= A, curparam[1] <- newparam[1], newparam[1] <- curparam[1])
@@ -592,7 +592,7 @@ for (i in 2:nt) {
     
     indeces <- grep(param, names(cur.par))
     
-    if (sum(curparam[indeces]) == 0){ #only update parameters in the current model
+    if (sum(curparam[indeces]) != 0){ #only update parameters in the current model
       for (m in indeces){
         u<-rnorm(1, 0, 0.25)
         newparam[m] <- curparam[m] + u
@@ -607,15 +607,15 @@ for (i in 2:nt) {
   
   # the random effect standard deviation
   #change 18 to correct index for random effect standard deviation
-  sd_index <- length(newparam)
-  u <- max(rnorm(1, 0, 0.08), -newparam[sd_index])    # cannot become 0 or less
-  newparam[sd_index] <- curparam[sd_index]+u
-  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
-  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
-  A <- min(1, exp(num-den))
-  V <- runif(1)
-  ifelse(V <= A, curparam[sd_index] <- newparam[sd_index], newparam[sd_index] <- curparam[sd_index])
-  
+  # sd_index <- length(newparam)
+  # u <- max(rnorm(1, 0, 0.08), -newparam[sd_index])    # cannot become 0 or less
+  # newparam[sd_index] <- curparam[sd_index]+u
+  # num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+  # den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+  # A <- min(1, exp(num-den))
+  # V <- runif(1)
+  # ifelse(V <= A, curparam[sd_index] <- newparam[sd_index], newparam[sd_index] <- curparam[sd_index])
+  # 
   #commented out for now but will add random effect for visit later
   # the random effects coefficients
   # for (m in 19:(j+18)){
