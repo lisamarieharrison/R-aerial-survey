@@ -131,7 +131,8 @@ nt <- 10 #fewer iterations for testing
 
 # holds the values for detection function parameters for each iteration
 # 15 colums due to 15 parameters in full model: hazard-rate det fct with covariates: year, type and state
-# we have 23 parameters: scale, shape, year(3), season(3), sea_state(3), cloud(9), water_clarity(3)
+# for det model we have 23 parameters: scale, shape, year(3), season(3), sea_state(3), cloud(9), water_clarity(3)
+# for count model we have 7 parameters: intercept, year(3) and season(3)
 det.param <- matrix(NA, nt+1, 18)
 
 # for an intercept only model:
@@ -141,10 +142,10 @@ det.param[1, ] <- c(scale0, shape0, rep(0, 16))
 det.model <- matrix(NA, nt+1, 1)            # refers to det.list
 
 # the matrix that will keep the parameter values for the density model
-count.param <- matrix(NA, nt+1, 22)    
+count.param <- matrix(NA, nt+1, 7)    
 
 # filling in the initial values
-count.param[1, 1:22] <- c(int0, rep(0, 21))
+count.param[1, ] <- c(int0, rep(0, 6))
 
 # holds the model id number for density model for each iteration
 count.model <- matrix(NA, nt+1, 1)          # refers to count.list
@@ -158,14 +159,14 @@ det.prop.sd <- c(1.41, 0.84, rep(0.1, 16))
 
 # proposal distribution for the fixed effect density model parameters
 # 1. for covey data
-count.prop.mean <- c(-13.06, 0, rnorm(21, 0, 1))
-count.prop.sd <- c(0.30, 0, rep(0.1, 21))
+count.prop.mean <- c(-13.06, rnorm(6, 0, 1))
+count.prop.sd <- c(0.30, rep(0.1, 6))
 
 msyt.prop.mean <- c(1, rep(0.5, 21))
 msyt.prop.sd <- rep(0.5, 22)
 
 ################## picking the first model for detection function
-det.model[1, 1] <- 5   # global hazard-rate: \bmath{\theta} = \{\sigma,\tau\}
+det.model[1, 1] <- 8   # global hazard-rate: \bmath{\theta} = \{\sigma,\tau\}
 cur.dmod <- det.model[1, 1]
 # holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
 rj.cursigs <- det.param[1, ]
@@ -174,10 +175,10 @@ rj.cursigs <- det.param[1, ]
 ################## picking the first model for density model
 # there are 16 models (all of them include random effect for Pair2):
 # to pick the first model:
-count.model[1] <- 1          # intercept and random effect only model \bmath{\beta}=\{\beta_0,\sigma_b^2\}
-cur.mod <- 1
+count.model[1] <- 4   # intercept and random effect only model \bmath{\beta}=\{\beta_0,\sigma_b^2\}
+cur.mod <- 4
 # holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
-rj.curparam <- count.param[1, 1:22]
+rj.curparam <- count.param[1, ]
 
 #-------------------------------------------------------------------
 # LN: This will change since we will define our own models
@@ -197,24 +198,13 @@ det.list[9, ] <-c(1, 1, rep(1, 16))                     # mcds with all variable
 
 
 # model identifier for density model, model number in rows, parameters (y/n) in columns
-count.list <- matrix(NA, 8, 22)
-colnames(count.list)<-c("int", "year2013", "year2014", "year2015", "seasonSummer", "seasonSpring", "seasonAutumn", paste0("ss", 1:3),  paste0("cc", 0:8), paste0("wc", 1:3))
-count.list[1, ] <- c(rep(1, 4), rep(0, 18))                # year 
-count.list[2, ] <- c(1, 0, 0, 0, 1, 1, 1, rep(0, 15))      # season
-count.list[3, ] <- c(rep(1, 7), rep(0, 15))                # year and season
-count.list[4, ] <- c(1, rep(0, 6), 1, 1, 1, rep(0, 12))    # sea state
-count.list[5, ] <- c(1,rep(0,21))                          # global hazard rate model
-count.list[6, ] <- c(1,rep(1,21))                          # all variables
-count.list[7, ] <- c(1, rep(0, 18), 1, 1, 1)               # water clarity
-count.list[8, ] <- c(1, rep(0, 9), rep(1, 9), 0, 0, 0)     # cloud cover
+count.list <- matrix(NA, 4, 7)
+colnames(count.list) <- c("int", "year2013", "year2014", "year2015", "seasonSummer", "seasonSpring", "seasonAutumn")
+count.list[1, ] <- c(rep(1, 4), rep(0, 3))     # year 
+count.list[2, ] <- c(1, 0, 0, 0, 1, 1, 1)      # season
+count.list[3, ] <- c(rep(1, 7))                # all variables
+count.list[4, ] <- c(1, rep(0, 6))              # null model
 
-################################# Likelihood functions ################################################
-
-# hazard-rate function for point transects: \pi(y) * g(y|\bmath{\theta}) from eqn (2) (LN: Paragraph following eqn. 2.2)
-f.haz.function<-function(dis, sigma, shape) {
-  f <- 2*pi*dis*(1-exp(-(dis/sigma)^(-shape)))
-  return(f)
-}
 
 ############################### the priors ###########################################################
 #-----------------------------------------------------------------
@@ -297,9 +287,6 @@ log.lik.fct <- function (p) {
   int <- p[19]               # density intercept
   yea <- p[20:22]            # density year 2013, 2015, 2016
   sea <- p[23:25]            # density season Summer, Spring, Autumn coef
-  ss  <- p[26:28]            # density sea_state 1, 2, 3 coef
-  cc  <- p[29:37]            # density cloud_cover 0-8 coef
-  wc  <- p[38:40]            # density water_clarity 1, 2, 3 coef
   
   #------------------------------------------------------------------------------
   # LN: Reasoning for 1 & 2 found in paragraph following eqn. 2.5
@@ -307,11 +294,10 @@ log.lik.fct <- function (p) {
   #------------------------------------------------------------------------------
   # 1. calculate the different scale parameters as function of parameters
   
-  combns <- expand.grid("year"= c("2013", "2014", "2015"), "season"= c("summer", "spring", "autumn"), "ss"= 1:3, 
-                        "cc"= 0:8, "wc"= 1:3)  
+  combns <- expand.grid("year"= c("2013", "2014", "2015"), "season"= c("summer", "spring", "autumn"))  
   
   sig.msyt <- rep(NA, nrow(combns))      # 11 states (rows), 3 years * 2 type levels (CONTROL,TREAT) (columns)
-  efa      <- rep(NA, nrow(combns))
+  efa      <- rep(NA, nrow(combns)) # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
   
   
   # for (strat in 1:11){        
@@ -323,37 +309,27 @@ log.lik.fct <- function (p) {
   #     sig.msyt[strat,ty]<-sig.msyt[strat,ty+3]*exp(sig.t)}}
   
   
-  sig.msyt <- sig1 * exp(sig.y[as.numeric(combns[, "year"])] + sig.s[as.numeric(combns[, "season"])] + 
-                           sig.ss[as.numeric(combns[, "ss"])] + sig.cc[as.numeric(combns[, "cc"]) + 1] +
-                           sig.wc[as.numeric(combns[, "wc"])])
+  sig.msyt <- sig1 * exp(sig.y[as.numeric(combns[, "year"])] + sig.s[as.numeric(combns[, "season"])])
   
   
   
   # 2. calculate the different effective areas as a function of covariates (using the scales from sig.msyt)
-  # for (strat in 1:11){
-  #   for (ty in 1:6){
-  #     efa[strat,ty]<-integrate(f.haz.function,0,500,sig.msyt[strat,ty],sha2)$value}}
+
   
   for (i in 1:length(sig.msyt)) {
-     tryCatch (
-     efa[i] <- 2*line_length*integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
-    error = function(err) {
-      print(p)})
+    tryCatch (
+      efa[i] <- 2*line_length*integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
+      error = function(err) {
+        print(paste0("Warning: couldn't calculate integral of f.haz.function: ", p))})
   }
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
   fe <- array(NA, length.d)
-  offset <- array(NA, length.d)
   for (i in 1:length.d){
     
-    combn_row <- which(combns$year == covey.d$Year[i] & combns$season == covey.d$Season[i] &
-                         combns$ss == covey.d$Sea_state[i] & combns$cc == covey.d$Cloud_cover[i] &
-                         combns$wc == covey.d$Water_clarity[i])
+    combn_row <- which(combns$year == covey.d$Year[i] & combns$season == covey.d$Season[i])
     
-    norm.const <- efa[combn_row]    # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
-    fe[i] <- log(f.haz.function(covey.d$Distance[i], sig.msyt[combn_row], sha2)/norm.const)
-    
-    offset[i] <- norm.const
+    fe[i] <- log(f.haz.function(covey.d$Distance[i], sig.msyt[combn_row], sha2)/efa[combn_row] )
     
   }
   
@@ -364,10 +340,12 @@ log.lik.fct <- function (p) {
   for (i in 1:length(visits)) {
     
     count_i <- sum(covey.d$Visit == i) #count for visit i
+    combn_row <- which(combns$year == unique(covey.d$Year[covey.d$Visit == i]) & combns$season == unique(covey.d$Season[covey.d$Visit == i]))
+    
     if (count_i == 0) {
       lambda[i] <- exp(int) #if 0 count on visit i, use only intercept
     } else {
-      lambda[i] <- exp(int + yea[which(years == unique(covey.d$Year[covey.d$Visit == i]))] + sea[which(seasons == unique(covey.d$Season[covey.d$Visit == i]))] + log(mean(offset[covey.d$Visit == i])))
+      lambda[i] <- exp(int + yea[which(years == unique(covey.d$Year[covey.d$Visit == i]))] + sea[which(seasons == unique(covey.d$Season[covey.d$Visit == i]))] + log(efa[combn_row]))
     }
     l.pois.y[i] <- log(dpois(count_i, lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
   }
@@ -487,7 +465,7 @@ for (i in 2:nt) {
   
   # for each parameter, check if it is in the current model 
   
-  for (param in c("year", "season", "ss", "cc", "wc")) {
+  for (param in c("year", "season")) {
     
     indeces <- grep(param, names(cur.par))
     
@@ -495,7 +473,7 @@ for (i in 2:nt) {
       new.par[indeces] <- 1
       
       for (f in indeces) {
-        rj.newparam[f] <- rnorm(1,count.prop.mean[f], count.prop.sd[f])
+        rj.newparam[f] <- rnorm(1, count.prop.mean[f], count.prop.sd[f])
       }
       
       rj.newparam[indeces] <- rnorm(1, count.prop.mean[indeces], count.prop.sd[indeces])
@@ -610,7 +588,7 @@ for (i in 2:nt) {
   
   # loop through each parameter
   
-  for (param in c("year", "season", "ss", "cc", "wc")) {
+  for (param in c("year", "season")) {
     
     indeces <- grep(param, names(cur.par))
     
