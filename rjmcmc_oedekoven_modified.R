@@ -121,7 +121,7 @@ std.ran0 <- 1
 
 # number of iterations
 #nt <- 100000
-nt <- 10 #fewer iterations for testing
+nt <- 50 #fewer iterations for testing
 
 #-------------------------------------------------------------------------
 # LN: Indexing here is specific to the case study
@@ -233,15 +233,6 @@ l.prior.sha<-function(shap){
   return(sum(log.u.sha))
 }
 
-#for scale coefficients
-l.prior.coef<-function(coefsig){
-  lcs<-length(coefsig)
-  log.u.coefsig<-array(NA,lcs)
-  for (k in 1:lcs){
-    log.u<-log(dunif(coefsig[k],-2.5,2.5))
-    ifelse(abs(log.u)==Inf,log.u.coefsig[k]<- -100000,log.u.coefsig[k]<-log.u)}
-  return(sum(log.u.coefsig))}
-
 # prior for random effect standard deviation (std.ran)
 l.prior.std.ran <- function (std.ran) {
   l.u.std.ran <- log(dunif(std.ran, 0, 2))
@@ -253,7 +244,9 @@ l.prior.std.ran <- function (std.ran) {
 
 l.prior <- function (x, min, max) {
   
-  #x = quantiles for dunif. I per level of factor
+  if (length(x) == 0) {
+    return(0)
+  }
   
   l.u_all <- NULL
   for (i in 1: length(x)) {
@@ -300,27 +293,18 @@ log.lik.fct <- function (p) {
   efa      <- rep(NA, nrow(combns)) # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
   
   
-  # for (strat in 1:11){        
-  #   for (ty in 4:6){
-  #     sig.msyt[strat,ty]<-sig1*exp(sig.st[strat]+ sig.y[ty-3])}}
-  # 
-  # for (strat in 1:11){
-  #   for (ty in 1:3){
-  #     sig.msyt[strat,ty]<-sig.msyt[strat,ty+3]*exp(sig.t)}}
-  
-  
   sig.msyt <- sig1 * exp(sig.y[as.numeric(combns[, "year"])] + sig.s[as.numeric(combns[, "season"])])
   
   
   
   # 2. calculate the different effective areas as a function of covariates (using the scales from sig.msyt)
-
+  
   
   for (i in 1:length(sig.msyt)) {
     tryCatch (
       efa[i] <- 2*line_length*integrate(f.haz.function, 0, 500, sig.msyt[i], sha2)$value,
       error = function(err) {
-        print(paste0("Warning: couldn't calculate integral of f.haz.function: ", i, sig1))})
+        print(paste0("Warning: couldn't calculate integral of f.haz.function"))})
   }
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
@@ -398,58 +382,93 @@ for (i in 2:nt) {
   ##################### RJ step : sequential proposals to add or delete covariates depending on whether they are in the model or not #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
+  # ############## the detection function  ########################
+  # 
+  # # the current model
+  # cur.dmod <- det.model[i - 1]
+  # curpa <- det.list[cur.dmod, ]
+  # # setting the parameters for the new model equal to the current model
+  # # newpa <- curpa
+  # # rj.newsigs <- rj.cursigs
+  # 
+  # going through the list of coefficients to check whether to add or remove one
+  # 
+  # for (param in c("year", "season", "ss", "cc", "wc")) {
+  #   
+  #   indeces <- grep(param, names(curpa))
+  #   
+  #   
+  #   if (sum(curpa[indeces]) == 0) {        # if param is not currently in the model, propose to add it
+  #     newpa[indeces] <- 1
+  #     rj.newsigs[indeces] <- rnorm(length(indeces), det.prop.mean[indeces], det.prop.sd[indeces])   # draw random samples from proposal distributions
+  #     num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[indeces]) # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
+  #     den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the denominator of eqn (11)
+  #   } else {
+  #     newpa[indeces] <- 0               # if param is in the current model, propose to delete it
+  #     rj.newsigs[indeces] <- 0
+  #     num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + sum(log(dnorm(rj.cursigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the numerator of eqn (11)
+  #     den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior(rj.cursigs[indeces]) # the denominator of eqn (11)
+  #   }
+  #   
+  #   #check whether the new model is accepted
+  #   A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
+  #   V <- runif(1)
+  #   if (V <= A) {                           # if move is accepted change current values to new values
+  #     rj.cursigs <- rj.newsigs               
+  #     curpa <- newpa
+  #   } else {                             
+  #     rj.newsigs<-rj.cursigs               # if move is rejected, reset everything to current
+  #     newpa<-curpa
+  #   }
+  #   
+  # }
+  # 
+  
   ############## the detection function  ########################
-  #--------------------------------------------------
-  # LN: More adjusting for the relevent shark models
-  #--------------------------------------------------
   
   # the current model
   cur.dmod <- det.model[i - 1]
   curpa <- det.list[cur.dmod, ]
   # setting the parameters for the new model equal to the current model
-  newpa <- curpa
+  
+  new_model <- sample(x = nrow(det.list), size = 1) #current model can be chosen again
+  newpa <- det.list[new_model, ]
   rj.newsigs <- rj.cursigs
   
-  # going through the list of coefficients to check whether to add or remove one
   
-  for (param in c("year", "season", "ss", "cc", "wc")) {
+  #fill in indeces for parameters that were not in the old model but are in the new one
+  added_indeces <- which(curpa == 0 & newpa == 1)
+  rj.newsigs[added_indeces] <- rnorm(length(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
+  
+  #remove parameters that are in the old model but are not in the new one
+  removed_indeces <- which(curpa == 1 & newpa == 0)
+  rj.newsigs[removed_indeces] <- 0
+  
+  num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
+  den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
+  
+  #check whether the new model is accepted
+  A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
+  V <- runif(1)
+  if (V <= A) {                           # if move is accepted change current values to new values
+    rj.cursigs <- rj.newsigs               
+    curpa <- newpa
+    cur.dmod <- new_model #change to new model if accepted
     
-    indeces <- grep(param, names(curpa))
-    
-    
-    if (sum(curpa[indeces]) == 0) {        # if param is not currently in the model, propose to add it
-      newpa[indeces] <- 1
-      rj.newsigs[indeces] <- rnorm(length(indeces), det.prop.mean[indeces], det.prop.sd[indeces])   # draw random samples from proposal distributions
-      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior.coef(rj.newsigs[indeces]) # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the denominator of eqn (11)
-    } else {
-      newpa[indeces] <- 0               # if param is in the current model, propose to delete it
-      rj.newsigs[indeces] <- 0
-      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + sum(log(dnorm(rj.cursigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the numerator of eqn (11)
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior.coef(rj.cursigs[indeces]) # the denominator of eqn (11)
-    }
-    
-    #check whether the new model is accepted
-    A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
-    V <- runif(1)
-    if (V <= A) {                           # if move is accepted change current values to new values
-      rj.cursigs <- rj.newsigs               
-      curpa <- newpa
-    } else {                             
-      rj.newsigs<-rj.cursigs               # if move is rejected, reset everything to current
-      newpa<-curpa
-    }
-    
+  } else {                             
+    rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
+    newpa<-curpa
   }
+  
   
   # which model did we end up with 
-  cur.dmod <- match.function(curpa, det.list)
-  
+  #cur.dmod <- match.function(curpa, det.list)
+
   #if model doesn't exist in our subset of chosen models, go back to the previous model
   #probably not the right thing to do in this situation
-  if (length(cur.dmod) == 0) {
-    cur.dmod <- det.model[i - 1]
-  }
+  # if (length(cur.dmod) == 0) {
+  #   cur.dmod <- det.model[i - 1]
+  # }
   
   # record the model selection for the det fct in det.model for the i'th iteration
   det.model[i] <- cur.dmod
@@ -555,10 +574,10 @@ for (i in 2:nt) {
     if (sum(mh.cursigs[indeces]) != 0) { #only update parameters in the current model
       for (ip in indeces) {
         #u<-rnorm(1,0,0.01)          # acc prob = 80-95%
-        u <- rnorm(1,0,0.12)
+        u <- rnorm(1, 0, 0.12)
         mh.newsigs[ip]<-mh.cursigs[ip] + u
-        num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.coef(mh.newsigs[ip])
-        den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.coef(mh.cursigs[ip])
+        num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior(mh.newsigs[ip], -1, 1)
+        den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior(mh.cursigs[ip], -1, 1)
         A <- min(1, exp(num - den))
         V <- runif(1)
         ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)
