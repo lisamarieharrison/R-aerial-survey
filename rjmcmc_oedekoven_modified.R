@@ -63,42 +63,9 @@ water_claritys <- sort(unique(covey.d$Water_clarity))
 visits         <- sort(unique(covey.d$Visit))
 
 j  <- length(visits)
-Y <- table(covey.d$Visit) #count per visit
+Y  <- table(covey.d$Visit) #count per visit
 
 line_length <- 26500 #m
-
-# matrix that will hold the counts n.jpr for each visit (1 row per site)
-#Y <- matrix(NA, j, max(Tj))
-
-# matrix that will hold the values for Year (1 for 2006, 2 for 2007, 3 for 2008): factor covariate with 2 levels
-#Year<-matrix(NA,j,max(Tj))
-
-# matrix that will hold a 0 or 1 depending on whether Type = CONTROL or TREAT, respectively
-#Type<-matrix(NA,j,max(Tj))
-
-# matrix that will hold the values for Julian day
-#Day<-matrix(NA,j,max(Tj))
-
-# matrix that will hold the values for State
-#State<-matrix(NA,j,max(Tj))
-
-# filling in the above values from
-# for (i in 1:j){
-#   
-#   x<-which(count.data$Site==site[i])
-#   l<-length(count.data$Count[x])
-#   y<-count.data$Count[x]
-#   for (k in 1:l){
-#     
-#     Y[i,k]<-y[k]
-#     Year[i,k]<-ifelse(count.data$Year[x[k]]==2006,1,{ifelse(count.data$Year[x[k]]==2007,2,3)})
-#     Type[i,k]<-ifelse(count.data$Type[x[k]]=="TREAT",1,0)
-#     Day[i,k]<-count.data$jd[x[k]]
-#     State[i,k]<-which(States==count.data$State[x[k]])
-#   }
-# }
-# sum(Y[which(is.na(Y)==F)])
-#[1] 2545
 
 ########################################  set initial values ##############
 
@@ -120,7 +87,6 @@ std.ran0 <- 1
 # setting up the matrices that will contain the paramter values;
 
 # number of iterations
-#nt <- 100000
 nt <- 200 #fewer iterations for testing
 
 #-------------------------------------------------------------------------
@@ -180,9 +146,7 @@ cur.mod <- 4
 # holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
 rj.curparam <- count.param[1, ]
 
-#-------------------------------------------------------------------
-# LN: This will change since we will define our own models
-#-------------------------------------------------------------------
+
 # model identifier for detection function, model number in rows, parameters (y/n) in columns
 det.list <- matrix(NA, 9, 18)
 colnames(det.list) <- c("sig","sha", "year2013", "year2014", "seasonSummer", "seasonSpring", paste0("s", 1:2),  paste0("cc", 0:7), paste0("wc", 1:2))
@@ -207,11 +171,6 @@ count.list[4, ] <- c(1, rep(0, 6))              # null model
 
 
 ############################### the priors ###########################################################
-#-----------------------------------------------------------------
-# LN: Can use the some of the existing functions
-#     Need to make sure limits are reasonable for the shark data
-#     Will need to make sure the shark covariates are represented
-#-----------------------------------------------------------------
 
 
 ### detection function parameters
@@ -384,48 +343,7 @@ for (i in 2:nt) {
   ##################### RJ step : sequential proposals to add or delete covariates depending on whether they are in the model or not #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
-  # ############## the detection function  ########################
-  # 
-  # # the current model
-  # cur.dmod <- det.model[i - 1]
-  # curpa <- det.list[cur.dmod, ]
-  # # setting the parameters for the new model equal to the current model
-  # # newpa <- curpa
-  # # rj.newsigs <- rj.cursigs
-  # 
-  # going through the list of coefficients to check whether to add or remove one
-  # 
-  # for (param in c("year", "season", "ss", "cc", "wc")) {
-  #   
-  #   indeces <- grep(param, names(curpa))
-  #   
-  #   
-  #   if (sum(curpa[indeces]) == 0) {        # if param is not currently in the model, propose to add it
-  #     newpa[indeces] <- 1
-  #     rj.newsigs[indeces] <- rnorm(length(indeces), det.prop.mean[indeces], det.prop.sd[indeces])   # draw random samples from proposal distributions
-  #     num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[indeces]) # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
-  #     den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the denominator of eqn (11)
-  #   } else {
-  #     newpa[indeces] <- 0               # if param is in the current model, propose to delete it
-  #     rj.newsigs[indeces] <- 0
-  #     num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + sum(log(dnorm(rj.cursigs[indeces], msyt.prop.mean[indeces], msyt.prop.sd[indeces]))) # the numerator of eqn (11)
-  #     den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior(rj.cursigs[indeces]) # the denominator of eqn (11)
-  #   }
-  #   
-  #   #check whether the new model is accepted
-  #   A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
-  #   V <- runif(1)
-  #   if (V <= A) {                           # if move is accepted change current values to new values
-  #     rj.cursigs <- rj.newsigs               
-  #     curpa <- newpa
-  #   } else {                             
-  #     rj.newsigs<-rj.cursigs               # if move is rejected, reset everything to current
-  #     newpa<-curpa
-  #   }
-  #   
-  # }
-  # 
-  
+ 
   ############## the detection function  ########################
   
   # the current model
@@ -462,15 +380,6 @@ for (i in 2:nt) {
     newpa<-curpa
   }
   
-  
-  # which model did we end up with 
-  #cur.dmod <- match.function(curpa, det.list)
-
-  #if model doesn't exist in our subset of chosen models, go back to the previous model
-  #probably not the right thing to do in this situation
-  # if (length(cur.dmod) == 0) {
-  #   cur.dmod <- det.model[i - 1]
-  # }
   
   # record the model selection for the det fct in det.model for the i'th iteration
   det.model[i] <- cur.dmod
@@ -560,7 +469,7 @@ for (i in 2:nt) {
   
   # for shape                  
   #u <- rnorm(1, 0, 0.2)
-  u <- rnorm(1, 2, 0.2)
+  u <- rnorm(1, 2, 0.2) #tweaked for gamma to stop the shape parameter becoming < 1
   
   mh.newsigs[2] <- mh.cursigs[2] + u
   num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
@@ -674,7 +583,9 @@ for (i in 2:nt) {
 #plot detection function over histogram of distances
 #distances scaled by expected count
 
-hist.obj <- hist(covey.d$Distance)
+det.param <- na.omit(det.param)
+
+hist.obj <- hist(covey.d$Distance, plot = FALSE)
 
 nc <- length(hist.obj$mids)
 pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), det.param[nrow(det.param) - 1, 1], det.param[nrow(det.param) - 1, 2])$value/max(covey.d$Distance)
@@ -693,7 +604,7 @@ calc_scale <- det.param[nrow(det.param) - 1, 1] * exp(mean(c(0, det.param[nrow(d
                          mean(c(0, det.param[nrow(det.param) - 1, 9:16])) +
                          mean(c(0, det.param[nrow(det.param) - 1, 17:18])))
 
-plot(hist.obj)
+plot(hist.obj, ylim = c(0, 1))
 points(f.gamma.function(0:max(covey.d$Distance), calc_scale, det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
 
 
