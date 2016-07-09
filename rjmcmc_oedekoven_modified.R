@@ -154,7 +154,7 @@ count.model <- matrix(NA, nt+1, 1)          # refers to count.list
 # proposal distributions for detection function parameters:
 
 # 1. for main analysis and prior sensitivity analysis
-det.prop.mean <- c(138.60, 3.00, rnorm(16, 0, 1))
+det.prop.mean <- c(138.60, 10, rnorm(16, 0, 1))
 det.prop.sd <- c(1.41, 0.84, rep(0.1, 16))
 
 # proposal distribution for the fixed effect density model parameters
@@ -302,9 +302,9 @@ log.lik.fct <- function (p) {
   
   for (i in 1:length(sig.msyt)) {
     tryCatch (
-      efa[i] <- 2*line_length*integrate(f.haz.function, 0, max(covey.d$Distance), sig.msyt[i], sha2)$value, #change max(distance) to truncation distance is there is one
+      efa[i] <- 2*line_length*integrate(f.gamma.function, 0, max(covey.d$Distance), sig.msyt[i], sha2)$value, #change max(distance) to truncation distance is there is one
       error = function(err) {
-        print(paste0("Warning: couldn't calculate integral of f.haz.function"))})
+        print(paste0("Warning: couldn't calculate integral of key function: ", sig.msyt[i], sha2))})
   }
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
@@ -313,7 +313,7 @@ log.lik.fct <- function (p) {
     
     combn_row <- which(combns$year == covey.d$Year[i] & combns$season == covey.d$Season[i])
     
-    fe[i] <- log(f.haz.function(covey.d$Distance[i], sig.msyt[combn_row], sha2)/efa[combn_row] )
+    fe[i] <- log(f.gamma.function(covey.d$Distance[i], sig.msyt[combn_row], sha2)/efa[combn_row] )
     
   }
   
@@ -350,11 +350,6 @@ match.function <- function (xmod,model.matrix) {
   return(result)
 }
 
-#-------------------------------------------------------------------------------
-# LN: We want to be using the functions for line transects
-#-------------------------------------------------------------------------------
-
-#need to change to gamma detection function at some stage
 
 ###### Alterations to this algorithm: 
 # dis = distance (perpendicular for lines and radial for points, sigma = scale parameters, shape = shape parameter
@@ -370,6 +365,13 @@ f.hn.function <- function(dis, sigma) {
 f.haz.function <- function(dis, sigma, shape) {
   f <- 1-exp(-(dis/sigma)^(-shape))
   return(f)
+}
+
+# gamma detection function from the mrds package: keyfct.gamma
+f.gamma.function <- function(dis, key.scale, key.shape) {
+  fr <- (1/gamma(key.shape)) * (((key.shape - 1)/exp(1))^(key.shape - 1))
+  v1 <- dis/(key.scale * fr)
+  return(v1^(key.shape-1)*exp(-v1)/(gamma(key.shape)*fr))
 }
 
 
@@ -557,7 +559,9 @@ for (i in 2:nt) {
   }
   
   # for shape                  
-  u <- rnorm(1, 0, 0.2)
+  #u <- rnorm(1, 0, 0.2)
+  u <- rnorm(1, 2, 0.2)
+  
   mh.newsigs[2] <- mh.cursigs[2] + u
   num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
   den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
@@ -673,7 +677,7 @@ for (i in 2:nt) {
 hist.obj <- hist(covey.d$Distance)
 
 nc <- length(hist.obj$mids)
-pa <- integrate(f.haz.function, 0, max(covey.d$Distance), det.param[nrow(det.param) - 1, 1], det.param[nrow(det.param) - 1, 2])$value/max(covey.d$Distance)
+pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), det.param[nrow(det.param) - 1, 1], det.param[nrow(det.param) - 1, 2])$value/max(covey.d$Distance)
 Nhat <- nrow(covey.d)/pa
 breaks <- hist.obj$breaks
 expected.counts <- (breaks[2:(nc+1)]-breaks[1:nc])*(Nhat/breaks[nc+1])
@@ -690,7 +694,7 @@ calc_scale <- det.param[nrow(det.param) - 1, 1] * exp(mean(c(0, det.param[nrow(d
                          mean(c(0, det.param[nrow(det.param) - 1, 17:18])))
 
 plot(hist.obj)
-points(f.haz.function(0:max(covey.d$Distance), calc_scale, det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
+points(f.gamma.function(0:max(covey.d$Distance), calc_scale, det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
 
 
 
