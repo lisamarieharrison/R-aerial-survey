@@ -13,12 +13,6 @@
 
 ###########################################################################################################################
 
-# Data format required:
-
-# for the detection function model L_y(\bmath{\theta}) (eqn (2.3))
-# matrix covey.d: a n*6 matrix  (n = total number of detections, 6 columns: id, distance, site, year, type, state)
-# LN: id and distance will be retained, the rest should be relevent covariates to the shark transects
-
 
 if (Sys.info()[4] == "SCI-6246") {
   setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
@@ -53,8 +47,6 @@ length.d <- length(covey.d$Distance)
 # number of observations for each site
 #LN: We only have one site, so this may not be needed
 
-#site<-sort(unique(count.data$Site))
-#j<-length(site)
 years          <- sort(unique(covey.d$Year))
 seasons        <- levels(covey.d$Season)
 sea_states     <- sort(unique(covey.d$Sea_state))
@@ -235,18 +227,17 @@ log.lik.fct <- function (p) {
   sig.cc <- c(p[9:16], 0)    # det fct: cloud_cover 0-8 coef
   sig.wc <- c(p[17:18], 0)   # det fct: water_clarity 1, 2, 3 coef
   
-  int <- p[19]               # density intercept
-  yea <- p[20:22]            # density year 2013, 2015, 2016
-  sea <- p[23:25]            # density season Summer, Spring, Autumn coef
+  int <- p[19]               # density: intercept
+  yea <- p[20:22]            # density: year 2013, 2015, 2016
+  sea <- p[23:25]            # density: season Summer, Spring, Autumn coef
   
-  std.ran <- p[26]           # density random effect standard deviation
-  b <- p[27:length(p)]       # random effect coefficients
+  std.ran <- p[26]           # density: random effect standard deviation
+  b <- p[27:length(p)]       # density: random effect coefficients
   
   #------------------------------------------------------------------------------
   # LN: Reasoning for 1 & 2 found in paragraph following eqn. 2.5
-  #     Dimensions will need to be made specific to the shark data at each step
   #------------------------------------------------------------------------------
-  # 1. calculate the different scale parameters as function of parameters
+  # 1. calculate the different scale parameters as function of all possible parameters
   
   combns <- expand.grid("year"= c("2013", "2014", "2015"), "season"= c("Summer", "Spring", "Autumn"))  
   
@@ -274,7 +265,14 @@ log.lik.fct <- function (p) {
     
     combn_row <- which(combns$year == covey.d$Year[i] & combns$season == covey.d$Season[i])
     
-    fe[i] <- log(f.gamma.function(covey.d$Distance[i], sig.msyt[combn_row], sha2)/efa[combn_row] )
+    #calculate scale as a function of all parameters
+    scale_param <- sig1 * exp(sig.y[which(years == covey.d$Year[i])] + 
+                        sig.s[which(seasons == covey.d$Season[i])] +
+                        sig.ss[which(sea_states == covey.d$Sea_state[i])] + 
+                        sig.cc[which(cloud_covers == covey.d$Cloud_cover[i])] +  
+                        sig.wc[which(water_claritys == covey.d$Water_clarity[i])])
+    
+    fe[i] <- log(f.gamma.function(covey.d$Distance[i], scale_param, sha2)/efa[combn_row])
     
   }
   
@@ -297,6 +295,8 @@ log.lik.fct <- function (p) {
     l.pois.y[i] <- log(dpois(count_i, lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
     l.b.norm[i] <- log(dnorm(b[i], 0, std.ran))  # log of normal density for b_j
   }
+  
+  
   
   post <- sum(fe) + sum(l.pois.y[!is.na(l.pois.y)]) + sum(l.b.norm)
   return(post)
@@ -345,7 +345,7 @@ f.gamma.function <- function(dis, key.scale, key.shape) {
 for (i in 2:nt) {
   print(i)
   
-  ##################### RJ step : sequential proposals to add or delete covariates depending on whether they are in the model or not #####
+  ##################### RJ step : sequential proposals to switch to another randomly selected model #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
  
@@ -354,9 +354,9 @@ for (i in 2:nt) {
   # the current model
   cur.dmod <- det.model[i - 1]
   curpa <- det.list[cur.dmod, ]
-  # setting the parameters for the new model equal to the current model
-  
-  new_model <- sample(x = nrow(det.list), size = 1) #current model can be chosen again
+
+  potential_models <- (1:nrow(det.list))[-cur.dmod]
+  new_model <- sample(x = potential_models, size = 1) #current model can't be chosen
   newpa <- det.list[new_model, ]
   rj.newsigs <- rj.cursigs
   
@@ -546,7 +546,8 @@ for (i in 2:nt) {
   V <- runif(1)
   ifelse(V <= A, curparam[sd_index] <- newparam[sd_index], newparam[sd_index] <- curparam[sd_index])
 
-  #this loop is particularly slow
+  # visit random effect coefficients
+  # this loop is particularly slow
   for (m in 9:length(curparam)) {
     u <- rnorm(1, 0, 0.4)
     newparam[m] <- curparam[m] + u
@@ -557,6 +558,7 @@ for (i in 2:nt) {
     ifelse(V <= A, curparam[m] <- newparam[m], newparam[m] <- curparam[m])
   }
   
+
   # saving the new parameter values of the density model in count.param
   count.param[i, ] <- curparam
   
