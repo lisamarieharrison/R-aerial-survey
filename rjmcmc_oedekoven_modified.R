@@ -241,17 +241,11 @@ log.lik.fct <- function (p) {
   
   combns <- expand.grid("year"= c("2013", "2014", "2015"), "season"= c("Summer", "Spring", "Autumn"))  
   
-  sig.msyt <- rep(NA, nrow(combns))      # 11 states (rows), 3 years * 2 type levels (CONTROL,TREAT) (columns)
-  efa      <- rep(NA, nrow(combns)) # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
-  
-  
   sig.msyt <- sig1 * exp(sig.y[as.numeric(combns[, "year"])] + sig.s[as.numeric(combns[, "season"])])
-  
-  
   
   # 2. calculate the different effective areas as a function of covariates (using the scales from sig.msyt)
   
-  
+  efa <- rep(NA, nrow(combns)) # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
   for (i in 1:length(sig.msyt)) {
     tryCatch (
       efa[i] <- 2*line_length*integrate(f.gamma.function, 0, max(covey.d$Distance), sig.msyt[i], sha2)$value, #change max(distance) to truncation distance is there is one
@@ -293,10 +287,9 @@ log.lik.fct <- function (p) {
       lambda[i] <- exp(int + yea[which(years == unique(covey.d$Year[covey.d$Visit == i]))] + sea[which(seasons == unique(covey.d$Season[covey.d$Visit == i]))] + b[i]+ log(efa[combn_row]))
     }
     l.pois.y[i] <- log(dpois(count_i, lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
-    l.b.norm[i] <- log(dnorm(b[i], 0, std.ran))  # log of normal density for b_j
   }
   
-  
+  l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
   
   post <- sum(fe) + sum(l.pois.y[!is.na(l.pois.y)]) + sum(l.b.norm)
   return(post)
@@ -356,7 +349,7 @@ for (i in 2:nt) {
   curpa <- det.list[cur.dmod, ]
 
   potential_models <- (1:nrow(det.list))[-cur.dmod]
-  new_model <- sample(x = potential_models, size = 1) #current model can't be chosen
+  new_model <- sample(x = potential_models, size = 1) #current model can't be chosen again
   newpa <- det.list[new_model, ]
   rj.newsigs <- rj.cursigs
   
@@ -545,20 +538,23 @@ for (i in 2:nt) {
   A <- min(1, exp(num-den))
   V <- runif(1)
   ifelse(V <= A, curparam[sd_index] <- newparam[sd_index], newparam[sd_index] <- curparam[sd_index])
-
+  
   # visit random effect coefficients
   # this loop is particularly slow
   for (m in 9:length(curparam)) {
-    u <- rnorm(1, 0, 0.4)
-    newparam[m] <- curparam[m] + u
+    newparam[m] <- curparam[m] + rnorm(1, 0, 0.4)
     num <- log.lik.fct(c(rj.cursigs, newparam))
     den <- log.lik.fct(c(rj.cursigs, curparam))
-    A <- min(1, exp(num-den))
-    V <- runif(1)
-    ifelse(V <= A, curparam[m] <- newparam[m], newparam[m] <- curparam[m])
+    A   <- min(1, exp(num-den))
+    V   <- runif(1)
+    if (V <= A) {
+      curparam[m] <- newparam[m]
+    } else {
+      newparam[m] <- curparam[m]
+    }
   }
   
-
+  
   # saving the new parameter values of the density model in count.param
   count.param[i, ] <- curparam
   
