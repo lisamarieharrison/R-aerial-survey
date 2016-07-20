@@ -22,7 +22,6 @@ if (Sys.info()[4] == "SCI-6246") {
   source_location <- "~/phd/southern ocean/Mixed models/R code/R-functions-southern-ocean/"
 }
 
-#covey.d<-covey2[which(is.na(covey2$Distance)==F),]
 dat <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
 covey.d <- dat[dat$Species == "BOT" & !is.na(dat$Dist..from.transect) & dat$Secondary != "Y" & dat$Observer == "Lisa", c("Date", "Season", "Dist..from.transect", "Beaufort.Sea.State", "Cloud.cover", "Water.clarity")]
 covey.d$Date <- as.character(covey.d$Date)
@@ -33,6 +32,14 @@ covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
 covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
 
 length.d <- length(covey.d$Distance)
+
+
+cd <- data.matrix(covey.d) #required for apply functions
+
+visit_tab <- data.matrix(covey.d[match(1:max(covey.d$Visit), covey.d$Visit), ])
+visit_tab[31, 9] <- 31
+counts <- rep(0, max(covey.d$Visit))
+counts[unique(covey.d$Visit)] <- table(covey.d$Visit)
 
 #-----------------------------------------------------------------
 # LN: This section is mostly specific to the case study in the ms
@@ -54,7 +61,7 @@ cloud_covers   <- sort(unique(covey.d$Cloud_cover))
 water_claritys <- sort(unique(covey.d$Water_clarity))
 visits         <- sort(unique(covey.d$Visit))
 
-j  <- length(visits)
+j  <- max(visits)  #visit 31 had no counts
 Y  <- table(covey.d$Visit) #count per visit
 
 line_length <- 26500 #m
@@ -213,6 +220,42 @@ l.prior <- function (x, min, max) {
 }
 
 
+#function to calculate likelihood for detection function for each observation
+calcFe <- function (x, combns, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
+  
+  combn_row <- combns$year == x[7] & combns$season == seasons[x[2]]
+  
+  #calculate scale as a function of all parameters
+  scale_param <- sig1 * exp(sig.y[years == x[7]] + 
+                              sig.s[x[2]] +
+                              sig.ss[sea_states == x[4]] + 
+                              sig.cc[cloud_covers == x[5]] +  
+                              sig.wc[water_claritys ==  x[6]])
+  
+  fe <- log(f.gamma.function(x[3], scale_param, sha2)/efa[combn_row])
+  
+  return (fe)
+  
+}
+
+#function to calculate the poisson likelihood of counts for each visit
+poissonLik <- function (x, combns, int, b, yea, sea, efa) {
+  
+  count_i <- counts[x["Visit"]] #count for visit i
+  
+  combn_row <- combns$year == x["Year"] & combns$season == seasons[x["Season"]]
+  
+  if (count_i == 0) {
+    lambda <- exp(int + b[x["Visit"]]) #if 0 count on visit i, use only intercept and random effect
+  } else {
+    lambda <- exp(int + yea[years == x["Year"]] + sea[x["Season"]] + b[x["Visit"]] + log(efa[combn_row]))
+  }
+  l.pois.y <- log(dpois(count_i, lambda))    # Poisson log-likelihood for each observation n_jpr in Y
+  
+  return(c(lambda, l.pois.y))
+  
+}
+
 ########################## the posterior conditional distribution functions ######################
 
 ### integrated likelihood L_{n,y}(\bmath{\beta},\bmath{\theta}} from eqn (1)  (LN: eqn. 2.1)
@@ -239,13 +282,13 @@ log.lik.fct <- function (p) {
   #------------------------------------------------------------------------------
   # 1. calculate the different scale parameters as function of all possible parameters
   
-  combns <- expand.grid("year"= c("2013", "2014", "2015"), "season"= c("Summer", "Spring", "Autumn"))  
+  combns <- expand.grid("year"= c("2013", "2014", "2015"), "season"= c("autumn", "spring", "summer"))  
   
   sig.msyt <- sig1 * exp(sig.y[as.numeric(combns[, "year"])] + sig.s[as.numeric(combns[, "season"])])
   
   # 2. calculate the different effective areas as a function of covariates (using the scales from sig.msyt)
   
-  efa <- rep(NA, nrow(combns)) # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
+  efa <- NULL # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
   for (i in 1:length(sig.msyt)) {
     tryCatch (
       efa[i] <- 2*line_length*integrate(f.gamma.function, 0, max(covey.d$Distance), sig.msyt[i], sha2)$value, #change max(distance) to truncation distance is there is one
@@ -254,44 +297,18 @@ log.lik.fct <- function (p) {
   }
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
-  fe <- array(NA, length.d)
-  for (i in 1:length.d){
-    
-    combn_row <- which(combns$year == covey.d$Year[i] & combns$season == covey.d$Season[i])
-    
-    #calculate scale as a function of all parameters
-    scale_param <- sig1 * exp(sig.y[which(years == covey.d$Year[i])] + 
-                        sig.s[which(seasons == covey.d$Season[i])] +
-                        sig.ss[which(sea_states == covey.d$Sea_state[i])] + 
-                        sig.cc[which(cloud_covers == covey.d$Cloud_cover[i])] +  
-                        sig.wc[which(water_claritys == covey.d$Water_clarity[i])])
-    
-    fe[i] <- log(f.gamma.function(covey.d$Distance[i], scale_param, sha2)/efa[combn_row])
-    
-  }
+  fe <- apply(cd, 1, calcFe, combns, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss)
   
+
   # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
-  l.pois.y <- NULL   # vector that will hold the Poisson likelihood for each observation n_jpr
-  lambda   <- NULL   # vector for storing the lambda_jpr from eqn (6)
-  l.b.norm <- NULL   # vector that will hold the normal density for each random effect coefficients b_j
-  
   # for each visit 
-  for (i in 1:length(visits)) {
-    
-    count_i <- sum(covey.d$Visit == i) #count for visit i
-    combn_row <- which(combns$year == unique(covey.d$Year[covey.d$Visit == i]) & combns$season == unique(covey.d$Season[covey.d$Visit == i]))
-    
-    if (count_i == 0) {
-      lambda[i] <- exp(int + b[i]) #if 0 count on visit i, use only intercept and random effect
-    } else {
-      lambda[i] <- exp(int + yea[which(years == unique(covey.d$Year[covey.d$Visit == i]))] + sea[which(seasons == unique(covey.d$Season[covey.d$Visit == i]))] + b[i]+ log(efa[combn_row]))
-    }
-    l.pois.y[i] <- log(dpois(count_i, lambda[i]))    # Poisson log-likelihood for each observation n_jpr in Y
-  }
-  
+
+  pois_ll <- apply(visit_tab, 1, poissonLik, combns, int, b, yea, sea, efa)
+  lambda <- pois_ll[1, ]
+  l.pois.y <- pois_ll[2, ] 
   l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
   
-  post <- sum(fe) + sum(l.pois.y[!is.na(l.pois.y)]) + sum(l.b.norm)
+  post <- sum(fe) + sum(l.pois.y) + sum(l.b.norm)
   return(post)
 }
 
@@ -325,10 +342,12 @@ f.haz.function <- function(dis, sigma, shape) {
 }
 
 # gamma detection function from the mrds package: keyfct.gamma
-f.gamma.function <- function(dis, key.scale, key.shape) {
+f.gamma.function <- function (dis, key.scale, key.shape) {
+  
   fr <- (1/gamma(key.shape)) * (((key.shape - 1)/exp(1))^(key.shape - 1))
   v1 <- dis/(key.scale * fr)
   return(v1^(key.shape-1)*exp(-v1)/(gamma(key.shape)*fr))
+  
 }
 
 
@@ -338,10 +357,11 @@ f.gamma.function <- function(dis, key.scale, key.shape) {
 for (i in 2:nt) {
   print(i)
   
+  #Rprof("path_to_hold_output")
   ##################### RJ step : sequential proposals to switch to another randomly selected model #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
- 
+  
   ############## the detection function  ########################
   
   # the current model
@@ -355,11 +375,11 @@ for (i in 2:nt) {
   
   
   #fill in indeces for parameters that were not in the old model but are in the new one
-  added_indeces <- which(curpa == 0 & newpa == 1)
-  rj.newsigs[added_indeces] <- rnorm(length(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
+  added_indeces <- curpa == 0 & newpa == 1
+  rj.newsigs[added_indeces] <- rnorm(sum(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
   
   #remove parameters that are in the old model but are not in the new one
-  removed_indeces <- which(curpa == 1 & newpa == 0)
+  removed_indeces <- curpa == 1 & newpa == 0
   rj.newsigs[removed_indeces] <- 0
   
   num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
@@ -400,11 +420,8 @@ for (i in 2:nt) {
     if (sum(cur.par[indeces]) == 0) {                  # if param is not in current model, propose to add it
       new.par[indeces] <- 1
       
-      for (f in indeces) {
-        rj.newparam[f] <- rnorm(1, count.prop.mean[f], count.prop.sd[f])
-      }
+      rj.newparam[indeces] <- rnorm(length(indeces), count.prop.mean[indeces], count.prop.sd[indeces]) #if parameter doesn't exist, generate a new value for it
       
-      rj.newparam[indeces] <- rnorm(1, count.prop.mean[indeces], count.prop.sd[indeces])
       num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[indeces], -1, 1) 
       den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[indeces], count.prop.mean[indeces], count.prop.sd[indeces])))
       
@@ -449,15 +466,16 @@ for (i in 2:nt) {
   # for scale intercept
   u <- rnorm(1, 0, 3.5)                
   if ((mh.cursigs[1] + u) > 1) {    
-    # prevents scale intercept to become < 0
-    mh.newsigs[1] <- mh.cursigs[1] + u
-    # the numerator of eqn (8)   (LN: This is is A.1)
-    num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1])
-    # the denominator of eqn (8)
-    den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1])
+    mh.newsigs[1] <- mh.cursigs[1] + u # prevents scale intercept to become < 0
+    num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
+    den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
     A <- min(1, exp(num-den))
     V <- runif(1)
-    ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)    
+    if (V <= A) {
+      mh.cursigs <- mh.newsigs
+    } else {
+      mh.newsigs <- mh.cursigs
+    } 
   }
   
   # for shape                  
@@ -469,7 +487,11 @@ for (i in 2:nt) {
   den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
   A <- min(1, exp(num-den))
   V <- runif(1)
-  ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)
+  if (V <= A) {
+    mh.cursigs <- mh.newsigs
+  } else {
+    mh.newsigs <- mh.cursigs
+  }
   
   # for each coefficient in the scale parameter:
   
@@ -478,14 +500,21 @@ for (i in 2:nt) {
     indeces <- grep(param, names(mh.cursigs))
     
     if (sum(mh.cursigs[indeces]) != 0) { #only update parameters in the current model
+      den_ll <- log.lik.fct(c(mh.cursigs, rj.curparam))
       for (ip in indeces) {
         u <- rnorm(1, 0, 0.12)
         mh.newsigs[ip]<-mh.cursigs[ip] + u
-        num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior(mh.newsigs[ip], -1, 1)
-        den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior(mh.cursigs[ip], -1, 1)
+        num_ll <- log.lik.fct(c(mh.newsigs, rj.curparam))
+        num <-  num_ll + l.prior(mh.newsigs[ip], -1, 1)
+        den <-  den_ll + l.prior(mh.cursigs[ip], -1, 1)
         A <- min(1, exp(num - den))
         V <- runif(1)
-        ifelse(V <= A, mh.cursigs <- mh.newsigs, mh.newsigs <- mh.cursigs)
+        if (V <= A) {
+          mh.cursigs <- mh.newsigs
+          den_ll <- num_ll
+        } else {
+          mh.newsigs <- mh.cursigs
+        } 
       }
     }
   }
@@ -508,7 +537,11 @@ for (i in 2:nt) {
   den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -20, 7) #changed curparam to c(rj.cursigs, curparam)
   A <- min(1, exp(num - den))
   V <- runif(1)
-  ifelse(V <= A, curparam[1] <- newparam[1], newparam[1] <- curparam[1])
+  if (V <= A) {
+    curparam[1] <- newparam[1]
+  } else {
+    newparam[1] <- curparam[1]
+  }
   
   # loop through each parameter
   
@@ -517,38 +550,50 @@ for (i in 2:nt) {
     indeces <- grep(param, names(cur.par))
     
     if (sum(curparam[indeces]) != 0){ #only update parameters in the current model
+      den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
       for (m in indeces){
-        u<-rnorm(1, 0, 0.25)
+        u <- rnorm(1, 0, 0.25)
         newparam[m] <- curparam[m] + u
-        num <- log.lik.fct(c(rj.cursigs,newparam)) + l.prior(newparam[m], -1, 1)
-        den <- log.lik.fct(c(rj.cursigs,curparam)) + l.prior(curparam[m], -1, 1)
+        num_ll <- log.lik.fct(c(rj.cursigs, newparam))
+        num <- num_ll + l.prior(newparam[m], -1, 1)
+        den <- den_ll + l.prior(curparam[m], -1, 1)
         A <- min(1, exp(num - den))
         V <- runif(1)
-        ifelse(V <= A, curparam[m] <- newparam[m], newparam[m] <- curparam[m])
+        if (V <= A) {
+          curparam[m] <- newparam[m]
+          den_ll <- num_ll
+        } else {
+          newparam[m] <- curparam[m]
+        }
       } 
     }
   }
   
+  
   # the visit random effect standard deviation
-  sd_index <- 8
-  u <- max(rnorm(1, 0, 0.08), -newparam[sd_index])    # cannot become 0 or less
-  newparam[sd_index] <- curparam[sd_index] + u
-  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
-  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[sd_index]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+  u <- max(rnorm(1, 0, 0.08), -newparam[8])    # cannot become 0 or less
+  newparam[8] <- curparam[8] + u
+  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
   A <- min(1, exp(num-den))
   V <- runif(1)
-  ifelse(V <= A, curparam[sd_index] <- newparam[sd_index], newparam[sd_index] <- curparam[sd_index])
+  if (V <= A) {
+    curparam[8] <- newparam[8]
+  } else {
+    newparam[8] <- curparam[8]
+  } 
   
   # visit random effect coefficients
-  # this loop is particularly slow
+
+  den <- log.lik.fct(c(rj.cursigs, curparam))
   for (m in 9:length(curparam)) {
     newparam[m] <- curparam[m] + rnorm(1, 0, 0.4)
     num <- log.lik.fct(c(rj.cursigs, newparam))
-    den <- log.lik.fct(c(rj.cursigs, curparam))
     A   <- min(1, exp(num-den))
     V   <- runif(1)
     if (V <= A) {
       curparam[m] <- newparam[m]
+      den <- num
     } else {
       newparam[m] <- curparam[m]
     }
@@ -568,11 +613,11 @@ for (i in 2:nt) {
     save(det.param, file = 'msyt.param.RData')
     save(count.param, file = 'count.param.RData')
   }
-  
+  #Rprof(NULL)
 } # end of iteration
 
 
-
+summaryRprof("path_to_hold_output")
 
 
 #plot detection function over histogram of distances
