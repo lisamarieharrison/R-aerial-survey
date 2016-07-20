@@ -23,6 +23,7 @@ if (Sys.info()[4] == "SCI-6246") {
 }
 
 dat <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
+dat$Year <- as.numeric(substr(as.character(dat$Date), nchar(as.character(dat$Date)) - 3, nchar(as.character(dat$Date))))
 covey.d <- dat[dat$Species == "BOT" & !is.na(dat$Dist..from.transect) & dat$Secondary != "Y" & dat$Observer == "Lisa", c("Date", "Season", "Dist..from.transect", "Beaufort.Sea.State", "Cloud.cover", "Water.clarity")]
 covey.d$Date <- as.character(covey.d$Date)
 covey.d$Year <- as.numeric(substr(covey.d$Date, nchar(covey.d$Date) - 3, nchar(covey.d$Date))) #extract year from date
@@ -37,7 +38,7 @@ length.d <- length(covey.d$Distance)
 cd <- data.matrix(covey.d) #required for apply functions
 
 visit_tab <- data.matrix(covey.d[match(1:max(covey.d$Visit), covey.d$Visit), ])
-visit_tab[31, 9] <- 31
+visit_tab[31, ] <- c(NA, unique(dat$Season[as.numeric(dat$Date) == 31]), NA, NA, NA, NA, unique(dat$Year[as.numeric(dat$Date) == 31]),  NA, 31)
 counts <- rep(0, max(covey.d$Visit))
 counts[unique(covey.d$Visit)] <- table(covey.d$Visit)
 
@@ -128,21 +129,6 @@ count.prop.sd <- c(0.30, rep(0.1, 6), 1)
 msyt.prop.mean <- c(1, rep(0.5, 21))
 msyt.prop.sd <- rep(0.5, 22)
 
-################## picking the first model for detection function
-det.model[1, 1] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
-cur.dmod <- det.model[1, 1]
-# holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
-rj.cursigs <- det.param[1, ]
-
-
-################## picking the first model for density model
-# there are 16 models (all of them include random effect for Pair2):
-# to pick the first model:
-count.model[1] <- sample(1:nrow(count.list), size = 1)   # randomly choose a model to start with
-cur.mod <- count.model[1]
-# holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
-rj.curparam <- count.param[1, ]
-
 
 # model identifier for detection function, model number in rows, parameters (y/n) in columns
 det.list <- matrix(NA, 9, 18)
@@ -167,6 +153,20 @@ count.list[2, ] <- c(1, 0, 0, 0, 1, 1, 1, 1)      # season
 count.list[3, ] <- c(rep(1, 8))                   # all variables
 count.list[4, ] <- c(1, rep(0, 6), 1)             # null model
 
+################## picking the first model for detection function
+det.model[1, 1] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
+cur.dmod <- det.model[1, 1]
+# holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
+rj.cursigs <- det.param[1, ]
+
+
+################## picking the first model for density model
+# there are 16 models (all of them include random effect for Pair2):
+# to pick the first model:
+count.model[1] <- sample(1:nrow(count.list), size = 1)   # randomly choose a model to start with
+cur.mod <- count.model[1]
+# holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
+rj.curparam <- count.param[1, ]
 
 ############################### the priors ###########################################################
 
@@ -186,7 +186,12 @@ l.prior.sha<-function(shap){
   log.u.sha<-array(NA,length(shap))
   for (k in 1:length(shap)){
     log.u<-log(dunif(shap[k], 1, 20))
-    ifelse(abs(log.u) == Inf,log.u.sha[k]<- -100000, log.u.sha[k] <- log.u)}
+    if (is.infinite(log.u)) {
+      log.u.sha[k]<- -100000
+    } else {
+      log.u.sha[k] <- log.u
+    }
+  }
   return(sum(log.u.sha))
 }
 
@@ -211,7 +216,7 @@ l.prior <- function (x, min, max) {
   }
   
   l.u  <- sum(l.u_all)
-  if (abs(l.u) == Inf) {
+  if (is.infinite(l.u)) {
     l.u <- -100000
   }
   
@@ -228,9 +233,9 @@ calcFe <- function (x, combns, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, si
   #calculate scale as a function of all parameters
   scale_param <- sig1 * exp(sig.y[years == x[7]] + 
                               sig.s[x[2]] +
-                              sig.ss[sea_states == x[4]] + 
-                              sig.cc[cloud_covers == x[5]] +  
-                              sig.wc[water_claritys ==  x[6]])
+                              sig.ss[x[4]] + 
+                              sig.cc[x[5] + 1] +  
+                              sig.wc[x[6]])
   
   fe <- log(f.gamma.function(x[3], scale_param, sha2)/efa[combn_row])
   
@@ -245,16 +250,22 @@ poissonLik <- function (x, combns, int, b, yea, sea, efa) {
   
   combn_row <- combns$year == x["Year"] & combns$season == seasons[x["Season"]]
   
-  if (count_i == 0) {
-    lambda <- exp(int + b[x["Visit"]]) #if 0 count on visit i, use only intercept and random effect
-  } else {
-    lambda <- exp(int + yea[years == x["Year"]] + sea[x["Season"]] + b[x["Visit"]] + log(efa[combn_row]))
-  }
+  lambda <- exp(int + yea[years == x["Year"]] + sea[x["Season"]] + b[x["Visit"]] + log(efa[combn_row]))
+  
   l.pois.y <- log(dpois(count_i, lambda))    # Poisson log-likelihood for each observation n_jpr in Y
   
   return(c(lambda, l.pois.y))
   
 }
+
+calcEfa <- function (x, line_length, max_dist, sha2) {
+  
+  efa <- 2*line_length*integrate(f.gamma.function, 0, max_dist, x, sha2)$value 
+  
+  return (efa)
+  
+}
+
 
 ########################## the posterior conditional distribution functions ######################
 
@@ -288,21 +299,16 @@ log.lik.fct <- function (p) {
   
   # 2. calculate the different effective areas as a function of covariates (using the scales from sig.msyt)
   
-  efa <- NULL # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
-  for (i in 1:length(sig.msyt)) {
-    tryCatch (
-      efa[i] <- 2*line_length*integrate(f.gamma.function, 0, max(covey.d$Distance), sig.msyt[i], sha2)$value, #change max(distance) to truncation distance is there is one
-      error = function(err) {
-        print(paste0("Warning: couldn't calculate integral of key function: ", sig.msyt[i], sha2))})
-  }
+  # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
+  efa <- sapply(sig.msyt, calcEfa, line_length, max(covey.d$Distance), sha2)
   
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
   fe <- apply(cd, 1, calcFe, combns, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss)
   
-
+  
   # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
   # for each visit 
-
+  
   pois_ll <- apply(visit_tab, 1, poissonLik, combns, int, b, yea, sea, efa)
   lambda <- pois_ll[1, ]
   l.pois.y <- pois_ll[2, ] 
@@ -313,20 +319,7 @@ log.lik.fct <- function (p) {
 }
 
 
-################################# other function you will need
-# this function matches a string of numbers against rows a matrix
-# and will return the row number of matrix that matches the string exactly
-match.function <- function (xmod,model.matrix) {
-  is.match.or.not <- array(NA, length(model.matrix[, 1]))
-  for (i in 1:length(model.matrix[, 1])) { 
-    is.match.or.not[i] <- sum(xmod == model.matrix[i, ])}
-  result <- which(is.match.or.not == length(model.matrix[1, ]))
-  return(result)
-}
-
-
-###### Alterations to this algorithm: 
-# dis = distance (perpendicular for lines and radial for points, sigma = scale parameters, shape = shape parameter
+#----------- DETECTION FUNCTIONS ---------#
 
 # using a half-normal detection function for line transects for f*y); g(y|\bmath{\theta}) from eqn (2) is given by (\pi(y) can be ommitted for line transects)
 f.hn.function <- function(dis, sigma) {
@@ -367,19 +360,18 @@ for (i in 2:nt) {
   # the current model
   cur.dmod <- det.model[i - 1]
   curpa <- det.list[cur.dmod, ]
-
-  potential_models <- (1:nrow(det.list))[-cur.dmod]
-  new_model <- sample(x = potential_models, size = 1) #current model can't be chosen again
+  
+  new_model <- sample(x = (1:nrow(det.list))[-cur.dmod], size = 1) #current model can't be chosen again
   newpa <- det.list[new_model, ]
   rj.newsigs <- rj.cursigs
   
   
   #fill in indeces for parameters that were not in the old model but are in the new one
-  added_indeces <- curpa == 0 & newpa == 1
+  added_indeces <- curpa - newpa == -1
   rj.newsigs[added_indeces] <- rnorm(sum(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
   
   #remove parameters that are in the old model but are not in the new one
-  removed_indeces <- curpa == 1 & newpa == 0
+  removed_indeces <- newpa - curpa == -1
   rj.newsigs[removed_indeces] <- 0
   
   num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
@@ -387,8 +379,7 @@ for (i in 2:nt) {
   
   #check whether the new model is accepted
   A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
-  V <- runif(1)
-  if (V <= A) {                           # if move is accepted change current values to new values
+  if (runif(1) <= A) {                           # if move is accepted change current values to new values
     rj.cursigs <- rj.newsigs               
     curpa <- newpa
     cur.dmod <- new_model #change to new model if accepted
@@ -405,56 +396,39 @@ for (i in 2:nt) {
   
   #################### RJ step for density model ##################################
   rj.newparam <- rj.curparam
+  
   # the current model:
   cur.mod <- count.model[i - 1]
-  # the parameters in the current model
+  
+  #choose a new model
+  new_model <- sample(x = (1:nrow(count.list))[-cur.mod], size = 1) #current model can't be chosen again
   cur.par <- count.list[cur.mod, ]
-  new.par <- cur.par
+  new.par <- count.list[new_model, ]
   
-  # for each parameter, check if it is in the current model 
   
-  for (param in c("year", "season")) {
-    
-    indeces <- grep(param, names(cur.par))
-    
-    if (sum(cur.par[indeces]) == 0) {                  # if param is not in current model, propose to add it
-      new.par[indeces] <- 1
-      
-      rj.newparam[indeces] <- rnorm(length(indeces), count.prop.mean[indeces], count.prop.sd[indeces]) #if parameter doesn't exist, generate a new value for it
-      
-      num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[indeces], -1, 1) 
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[indeces], count.prop.mean[indeces], count.prop.sd[indeces])))
-      
-      #check if the new model is accepted
-      A <- min(1, exp(num - den))
-      V <- runif(1)
-      if (V <= A) {                             
-        rj.curparam <- rj.newparam   #if accepted, update current model            
-        cur.par <- new.par
-      } else {                             
-        rj.newparam <- rj.curparam     #if rejected, reset parameters
-        new.par <- cur.par
-      }
-    } else {
-      rj.newparam[indeces] <- 0         # if param is in the current model, propose to delete it
-      new.par[indeces] <- 0
-      num <- log.lik.fct(c(rj.cursigs, rj.newparam))  + sum(log(dnorm(rj.curparam[indeces], count.prop.mean[indeces], count.prop.sd[indeces])))
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + l.prior(rj.curparam[indeces], -1, 1) 
-      A <- min(1, exp(num - den))
-      V <- runif(1)
-      if ( V <= A) {                             
-        rj.curparam <- rj.newparam     #if accepted, update current model            
-        cur.par <- new.par
-      } else {                             
-        rj.newparam <- rj.curparam  #if rejected, reset parameters
-        new.par <- cur.par
-      }
-    }  
+  #fill in indeces for parameters that were not in the old model but are in the new one
+  added_indeces <- cur.par - new.par == -1
+  rj.newparam[added_indeces] <- rnorm(sum(added_indeces), count.prop.mean[added_indeces], count.prop.sd[added_indeces])
+  
+  #remove parameters that are in the old model but are not in the new one
+  removed_indeces <- new.par - cur.par == -1
+  rj.newparam[removed_indeces] <- 0
+  
+  num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[added_indeces], -1, 1) + sum(log(dnorm(rj.newparam[removed_indeces], count.prop.mean[removed_indeces], count.prop.sd[removed_indeces])))
+  den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[added_indeces], count.prop.mean[added_indeces], count.prop.sd[added_indeces]))) + l.prior(rj.newparam[removed_indeces], -1, 1)
+  
+  #check if the new model is accepted
+  A <- min(1, exp(num - den))
+  if (runif(1) <= A) {                             
+    rj.curparam <- rj.newparam   #if accepted, update current model            
+    cur.par <- new.par
+    cur.mod <- new_model
+  } else {                             
+    rj.newparam <- rj.curparam     #if rejected, reset parameters
+    new.par <- cur.par
   }
   
-  # which model did we end up with:
-  cur.mod <- match.function(cur.par, count.list)
-  
+  # record which model we ended up with
   count.model[i] <- cur.mod
   
   ########################## Metropolis Hastings update ########################################################
@@ -464,14 +438,13 @@ for (i in 2:nt) {
   mh.cursigs <- rj.cursigs
   
   # for scale intercept
-  u <- rnorm(1, 0, 3.5)                
+  u <- rnorm(1, 0, 3.5) 
   if ((mh.cursigs[1] + u) > 1) {    
-    mh.newsigs[1] <- mh.cursigs[1] + u # prevents scale intercept to become < 0
+    mh.newsigs[1] <- mh.cursigs[1] + u   # prevents scale intercept to become < 0
     num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
     den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
     A <- min(1, exp(num-den))
-    V <- runif(1)
-    if (V <= A) {
+    if (runif(1) <= A) {
       mh.cursigs <- mh.newsigs
     } else {
       mh.newsigs <- mh.cursigs
@@ -479,46 +452,37 @@ for (i in 2:nt) {
   }
   
   # for shape                  
-  #u <- rnorm(1, 0, 0.2)
-  u <- rnorm(1, 2, 0.2) #tweaked for gamma to stop the shape parameter becoming < 1
-  
-  mh.newsigs[2] <- mh.cursigs[2] + u
+  mh.newsigs[2] <- mh.cursigs[2] + rnorm(1, 2, 0.2) #tweaked for gamma to stop the shape parameter becoming < 1
   num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
   den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
   A <- min(1, exp(num-den))
-  V <- runif(1)
-  if (V <= A) {
+  if (runif(1) <= A) {
     mh.cursigs <- mh.newsigs
   } else {
     mh.newsigs <- mh.cursigs
   }
   
   # for each coefficient in the scale parameter:
+  indeces <- which(mh.cursigs != 0)
+  den_ll <- log.lik.fct(c(mh.cursigs, rj.curparam))
   
-  for (param in c("year", "season", "ss", "cc", "wc")) {
+  for (ip in indeces) {
     
-    indeces <- grep(param, names(mh.cursigs))
+    mh.newsigs[ip] <- mh.cursigs[ip] + rnorm(1, 0, 0.12)
+    num_ll <- log.lik.fct(c(mh.newsigs, rj.curparam))
+    num <-  num_ll + l.prior(mh.newsigs[ip], -1, 1)
+    den <-  den_ll + l.prior(mh.cursigs[ip], -1, 1)
+    A <- min(1, exp(num - den))
+    if (runif(1) <= A) {
+      mh.cursigs <- mh.newsigs
+      den_ll <- num_ll
+    } else {
+      mh.newsigs <- mh.cursigs
+    } 
     
-    if (sum(mh.cursigs[indeces]) != 0) { #only update parameters in the current model
-      den_ll <- log.lik.fct(c(mh.cursigs, rj.curparam))
-      for (ip in indeces) {
-        u <- rnorm(1, 0, 0.12)
-        mh.newsigs[ip]<-mh.cursigs[ip] + u
-        num_ll <- log.lik.fct(c(mh.newsigs, rj.curparam))
-        num <-  num_ll + l.prior(mh.newsigs[ip], -1, 1)
-        den <-  den_ll + l.prior(mh.cursigs[ip], -1, 1)
-        A <- min(1, exp(num - den))
-        V <- runif(1)
-        if (V <= A) {
-          mh.cursigs <- mh.newsigs
-          den_ll <- num_ll
-        } else {
-          mh.newsigs <- mh.cursigs
-        } 
-      }
-    }
   }
-  
+
+
   # fill in the new parameter values
   det.param[i, ] <- mh.cursigs
   rj.cursigs <- mh.cursigs
@@ -531,67 +495,58 @@ for (i in 2:nt) {
   newparam <- rj.curparam
   
   # the intercept
-  u <- rnorm(1, 0, 0.08)                        
-  newparam[1] <- curparam[1] + u
+  newparam[1] <- curparam[1] + rnorm(1, 0, 0.08) 
   num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -20, 7) #changed newparam to c(rj.cursigs, newparam)
   den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -20, 7) #changed curparam to c(rj.cursigs, curparam)
   A <- min(1, exp(num - den))
-  V <- runif(1)
-  if (V <= A) {
+  if (runif(1) <= A) {
     curparam[1] <- newparam[1]
   } else {
     newparam[1] <- curparam[1]
   }
   
   # loop through each parameter
-  
-  for (param in c("year", "season")) {
+  indeces <- which(cur.par != 0)
+  den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
+  for (m in indeces) {
     
-    indeces <- grep(param, names(cur.par))
-    
-    if (sum(curparam[indeces]) != 0){ #only update parameters in the current model
-      den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
-      for (m in indeces){
-        u <- rnorm(1, 0, 0.25)
-        newparam[m] <- curparam[m] + u
-        num_ll <- log.lik.fct(c(rj.cursigs, newparam))
-        num <- num_ll + l.prior(newparam[m], -1, 1)
-        den <- den_ll + l.prior(curparam[m], -1, 1)
-        A <- min(1, exp(num - den))
-        V <- runif(1)
-        if (V <= A) {
-          curparam[m] <- newparam[m]
-          den_ll <- num_ll
-        } else {
-          newparam[m] <- curparam[m]
-        }
-      } 
+    u <- rnorm(1, 0, 0.25)
+    newparam[m] <- curparam[m] + u
+    num_ll <- log.lik.fct(c(rj.cursigs, newparam))
+    num <- num_ll + l.prior(newparam[m], -1, 1)
+    den <- den_ll + l.prior(curparam[m], -1, 1)
+    A <- min(1, exp(num - den))
+    V <- runif(1)
+    if (V <= A) {
+      curparam[m] <- newparam[m]
+      den_ll <- num_ll
+    } else {
+      newparam[m] <- curparam[m]
     }
+    
+    
   }
   
   
   # the visit random effect standard deviation
-  u <- max(rnorm(1, 0, 0.08), -newparam[8])    # cannot become 0 or less
-  newparam[8] <- curparam[8] + u
+  newparam[8] <- curparam[8] + max(rnorm(1, 0, 0.08), -newparam[8]) # cannot become 0 or less
   num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
   den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
   A <- min(1, exp(num-den))
-  V <- runif(1)
-  if (V <= A) {
+  if (runif(1) <= A) {
     curparam[8] <- newparam[8]
   } else {
     newparam[8] <- curparam[8]
   } 
   
   # visit random effect coefficients
-
+  
   den <- log.lik.fct(c(rj.cursigs, curparam))
   for (m in 9:length(curparam)) {
     newparam[m] <- curparam[m] + rnorm(1, 0, 0.4)
     num <- log.lik.fct(c(rj.cursigs, newparam))
     A   <- min(1, exp(num-den))
-    V   <- runif(1)
-    if (V <= A) {
+    if (runif(1) <= A) {
       curparam[m] <- newparam[m]
       den <- num
     } else {
@@ -639,10 +594,10 @@ hist.obj$equidist <- FALSE
 
 #calculate scale averaged across all parameter levels
 calc_scale <- det.param[nrow(det.param) - 1, 1] * exp(mean(c(0, det.param[nrow(det.param) - 1, 3:4])) +
-                         mean(c(0, det.param[nrow(det.param) - 1, 5:6])) +
-                         mean(c(0, det.param[nrow(det.param) - 1, 7:8])) +
-                         mean(c(0, det.param[nrow(det.param) - 1, 9:16])) +
-                         mean(c(0, det.param[nrow(det.param) - 1, 17:18])))
+                                                        mean(c(0, det.param[nrow(det.param) - 1, 5:6])) +
+                                                        mean(c(0, det.param[nrow(det.param) - 1, 7:8])) +
+                                                        mean(c(0, det.param[nrow(det.param) - 1, 9:16])) +
+                                                        mean(c(0, det.param[nrow(det.param) - 1, 17:18])))
 
 plot(hist.obj, ylim = c(0, 1))
 points(f.gamma.function(0:max(covey.d$Distance), calc_scale, det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
