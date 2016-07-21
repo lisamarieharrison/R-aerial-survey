@@ -13,6 +13,7 @@
 
 ###########################################################################################################################
 
+library(compiler)
 
 if (Sys.info()[4] == "SCI-6246") {
   setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
@@ -325,15 +326,18 @@ f.gamma.function <- function (dis, key.scale, key.shape) {
   return(v1^(key.shape-1)*exp(-v1)/(gamma(key.shape)*fr))
   
 }
-
+f.gamma.function <- cmpfun(f.gamma.function)
 
 #################################  the RJMCMC algorithm ######################################
 # nt is the number of iterations and is set above
 # row 1 is filled in with initial values for parameters and models
 for (i in 2:nt) {
-  print(i)
   
-  #Rprof("path_to_hold_output")
+  if (i %% 10 == 0) {
+    print(i)
+  }
+  
+  Rprof("path_to_hold_output")
   ##################### RJ step : sequential proposals to switch to another randomly selected model #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
@@ -364,12 +368,10 @@ for (i in 2:nt) {
   A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
   if (runif(1) <= A) {                           # if move is accepted change current values to new values
     rj.cursigs <- rj.newsigs               
-    curpa <- newpa
     cur.dmod <- new_model #change to new model if accepted
     
   } else {                             
     rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
-    newpa<-curpa
   }
   
   
@@ -404,11 +406,9 @@ for (i in 2:nt) {
   A <- min(1, exp(num - den))
   if (runif(1) <= A) {                             
     rj.curparam <- rj.newparam   #if accepted, update current model            
-    cur.par <- new.par
     cur.mod <- new_model
   } else {                             
     rj.newparam <- rj.curparam     #if rejected, reset parameters
-    new.par <- cur.par
   }
   
   # record which model we ended up with
@@ -489,7 +489,7 @@ for (i in 2:nt) {
   }
   
   # loop through each parameter
-  indeces <- which(cur.par != 0)
+  indeces <- which(curparam[1:8] != 0)
   den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
   for (m in indeces) {
     
@@ -552,7 +552,7 @@ for (i in 2:nt) {
     save(det.param, file = 'msyt.param.RData')
     save(count.param, file = 'count.param.RData')
   }
-  #Rprof(NULL)
+  Rprof(NULL)
 } # end of iteration
 
 
