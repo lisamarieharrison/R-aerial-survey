@@ -231,8 +231,6 @@ l.prior <- function (x, min, max) {
 #function to calculate likelihood for detection function for each observation
 calcFe <- function (x, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
   
-  combn_row <- combns$year == x[7] & combns$season == seasons[x[2]]
-  
   #calculate scale as a function of all parameters
   scale_param <- sig1 * exp(sig.y[years == x[7]] + 
                               sig.s[x[2]] +
@@ -335,7 +333,7 @@ f.gamma.function <- function (dis, key.scale, key.shape) {
 for (i in 2:nt) {
   print(i)
   
-  Rprof("path_to_hold_output")
+  #Rprof("path_to_hold_output")
   ##################### RJ step : sequential proposals to switch to another randomly selected model #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
@@ -554,7 +552,7 @@ for (i in 2:nt) {
     save(det.param, file = 'msyt.param.RData')
     save(count.param, file = 'count.param.RData')
   }
-  Rprof(NULL)
+  #Rprof(NULL)
 } # end of iteration
 
 
