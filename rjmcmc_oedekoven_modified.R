@@ -168,6 +168,12 @@ cur.mod <- count.model[1]
 # holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
 rj.curparam <- count.param[1, ]
 
+
+#set prior min and max
+#currently uniform uninformative priors
+det.priors <- rbind(rep(-1, length(det.prop.mean)), rep(1, length(det.prop.mean)))
+count.priors <- rbind(rep(-1, length(count.prop.mean)), rep(1, length(count.prop.mean)))
+
 ############################### the priors ###########################################################
 
 
@@ -391,12 +397,12 @@ for (i in 2:nt) {
   
   
   #fill in indeces for parameters that were not in the old model but are in the new one
-  added_indeces <- cur.par - new.par == -1
-  rj.newparam[1:8][added_indeces] <- rnorm(sum(added_indeces), count.prop.mean[added_indeces], count.prop.sd[added_indeces])
+  added_indeces <- which(cur.par - new.par == -1)
+  rj.newparam[added_indeces] <- rnorm(length(added_indeces), count.prop.mean[added_indeces], count.prop.sd[added_indeces])
   
   #remove parameters that are in the old model but are not in the new one
-  removed_indeces <- new.par - cur.par == -1
-  rj.newparam[1:8][removed_indeces] <- 0
+  removed_indeces <- which(new.par - cur.par == -1)
+  rj.newparam[removed_indeces] <- 0
   
   num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[added_indeces], -1, 1) + sum(log(dnorm(rj.newparam[removed_indeces], count.prop.mean[removed_indeces], count.prop.sd[removed_indeces])))
   den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[added_indeces], count.prop.mean[added_indeces], count.prop.sd[added_indeces]))) + l.prior(rj.newparam[removed_indeces], -1, 1)
@@ -478,8 +484,8 @@ for (i in 2:nt) {
   
   # the intercept
   newparam[1] <- curparam[1] + rnorm(1, 0, 0.08) 
-  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -20, 7) #changed newparam to c(rj.cursigs, newparam)
-  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -20, 7) #changed curparam to c(rj.cursigs, curparam)
+  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -1, 1) #changed newparam to c(rj.cursigs, newparam)
+  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -1, 1) #changed curparam to c(rj.cursigs, curparam)
   A <- min(1, exp(num - den))
   if (runif(1) <= A) {
     curparam[1] <- newparam[1]
