@@ -71,11 +71,11 @@ line_length <- 26500 #m
 ########################################  set initial values ##############
 
 # global hazard-rate model with scale and shape for L_y(\bmath{\theta}) (eqn 2.3)
-scale0 <- 130
-shape0 <- 2.5
+scale0 <- 210
+shape0 <- 10
 
 #  count model parameters: intercept and random effect standard deviation for L_n(\bmath{\beta}|\bmath{\theta}) (eqn (6))
-int0 <- -13
+int0 <- -9
 std.ran0 <- 1
 
 # the random effect coefficients b_j
@@ -86,7 +86,7 @@ b0 <- rnorm(j, 0, std.ran0)
 # setting up the matrices that will contain the paramter values;
 
 # number of iterations
-nt <- 100 #fewer iterations for testing
+nt <- 1000 #fewer iterations for testing
 
 #-------------------------------------------------------------------------
 # LN: Indexing here is specific to the case study
@@ -119,11 +119,11 @@ count.model <- matrix(NA, nt+1, 1)          # refers to count.list
 # proposal distributions for detection function parameters:
 
 # 1. for main analysis and prior sensitivity analysis
-det.prop.mean <- c(138.60, 10, rnorm(16, 0, 1))
+det.prop.mean <- c(200, 9, rnorm(16, 0, 1))
 det.prop.sd <- c(1.41, 0.84, rep(0.1, 16))
 
 # proposal distribution for the fixed effect density model parameters
-count.prop.mean <- c(-13.06, rnorm(6, 0, 1), 0)
+count.prop.mean <- c(-10, rnorm(6, 0, 1), 0)
 count.prop.sd <- c(0.30, rep(0.1, 6), 1)
 
 msyt.prop.mean <- c(1, rep(0.5, 21))
@@ -182,7 +182,7 @@ count.priors <- rbind(rep(-1, length(count.prop.mean)), rep(1, length(count.prop
 l.prior.sig <- function(sigm) {
   log.u.sig<-array(NA,length(sigm))
   for (k in 1:length(sigm)) {
-    log.u.sig[k] <- log(dunif(sigm[k], 1, 100000))                                
+    log.u.sig[k] <- log(dunif(sigm[k], 1, 500))                                
   }
   return(sum(log.u.sig))
 }
@@ -333,16 +333,18 @@ f.gamma.function <- function (dis, key.scale, key.shape) {
 }
 f.gamma.function <- cmpfun(f.gamma.function)
 
+
+Rprof("path_to_hold_output")
+
 #################################  the RJMCMC algorithm ######################################
 # nt is the number of iterations and is set above
 # row 1 is filled in with initial values for parameters and models
 for (i in 2:nt) {
   
-  # if (i %% 10 == 0) {
-  #   print(i)
-  # }
+  if (i %% 100 == 0) {
+    print(i)
+  }
   
-  #Rprof("path_to_hold_output")
   ##################### RJ step : sequential proposals to switch to another randomly selected model #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
@@ -552,14 +554,13 @@ for (i in 2:nt) {
   
   # saving the parameter matrices ever 1000 iterations
   if (i %% 1000 == 0) {
-    save(det.model, file = 'det.model.RData')
-    save(count.model, file = 'count.model.RData')
-    save(det.param, file = 'msyt.param.RData')
-    save(count.param, file = 'count.param.RData')
+    write.table(cbind(det.model, count.model), "models.csv", append = TRUE, row.names = F)
+    write.table(det.param, 'det.param.csv', append = TRUE, row.names = F)
+    write.table(count.param, 'det.param.csv', append = TRUE, row.names = F)
   }
-  #Rprof(NULL)
 } # end of iteration
 
+Rprof(NULL)
 
 summaryRprof("path_to_hold_output")
 
