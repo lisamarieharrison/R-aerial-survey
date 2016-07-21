@@ -85,7 +85,7 @@ b0 <- rnorm(j, 0, std.ran0)
 # setting up the matrices that will contain the paramter values;
 
 # number of iterations
-nt <- 200 #fewer iterations for testing
+nt <- 100 #fewer iterations for testing
 
 #-------------------------------------------------------------------------
 # LN: Indexing here is specific to the case study
@@ -198,6 +198,9 @@ l.prior.sha<-function(shap){
 # prior for random effect standard deviation (std.ran)
 l.prior.std.ran <- function (std.ran) {
   l.u.std.ran <- log(dunif(std.ran, 0, 2))
+  if(is.infinite(l.u.std.ran)) {
+    l.u.std.ran <- -100000
+  }
   return(l.u.std.ran)
 }
 
@@ -226,7 +229,7 @@ l.prior <- function (x, min, max) {
 
 
 #function to calculate likelihood for detection function for each observation
-calcFe <- function (x, combns, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
+calcFe <- function (x, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
   
   combn_row <- combns$year == x[7] & combns$season == seasons[x[2]]
   
@@ -237,20 +240,18 @@ calcFe <- function (x, combns, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, si
                               sig.cc[x[5] + 1] +  
                               sig.wc[x[6]])
   
-  fe <- log(f.gamma.function(x[3], scale_param, sha2)/efa[combn_row])
+  fe <- log(f.gamma.function(x[3], scale_param, sha2))
   
   return (fe)
   
 }
 
 #function to calculate the poisson likelihood of counts for each visit
-poissonLik <- function (x, combns, int, b, yea, sea, efa) {
+poissonLik <- function (x, int, b, yea, sea, efa) {
   
   count_i <- counts[x["Visit"]] #count for visit i
   
-  combn_row <- combns$year == x["Year"] & combns$season == seasons[x["Season"]]
-  
-  lambda <- exp(int + yea[years == x["Year"]] + sea[x["Season"]] + b[x["Visit"]] + log(efa[combn_row]))
+  lambda <- exp(int + yea[years == x["Year"]] + sea[x["Season"]] + b[x["Visit"]])
   
   l.pois.y <- log(dpois(count_i, lambda))    # Poisson log-likelihood for each observation n_jpr in Y
   
@@ -258,13 +259,6 @@ poissonLik <- function (x, combns, int, b, yea, sea, efa) {
   
 }
 
-calcEfa <- function (x, line_length, max_dist, sha2) {
-  
-  efa <- 2*line_length*integrate(f.gamma.function, 0, max_dist, x, sha2)$value 
-  
-  return (efa)
-  
-}
 
 
 ########################## the posterior conditional distribution functions ######################
@@ -291,25 +285,16 @@ log.lik.fct <- function (p) {
   #------------------------------------------------------------------------------
   # LN: Reasoning for 1 & 2 found in paragraph following eqn. 2.5
   #------------------------------------------------------------------------------
-  # 1. calculate the different scale parameters as function of all possible parameters
-  
-  combns <- expand.grid("year"= c("2013", "2014", "2015"), "season"= c("autumn", "spring", "summer"))  
-  
-  sig.msyt <- sig1 * exp(sig.y[as.numeric(combns[, "year"])] + sig.s[as.numeric(combns[, "season"])])
-  
-  # 2. calculate the different effective areas as a function of covariates (using the scales from sig.msyt)
-  
-  # normalising constant from denominator in eqn (2) equals the effective area for a given scale and shape parameter
-  efa <- sapply(sig.msyt, calcEfa, line_length, max(covey.d$Distance), sha2)
-  
+
+
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
-  fe <- apply(cd, 1, calcFe, combns, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss)
+  fe <- apply(cd, 1, calcFe, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss)
   
   
   # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
   # for each visit 
   
-  pois_ll <- apply(visit_tab, 1, poissonLik, combns, int, b, yea, sea, efa)
+  pois_ll <- apply(visit_tab, 1, poissonLik, int, b, yea, sea)
   lambda <- pois_ll[1, ]
   l.pois.y <- pois_ll[2, ] 
   l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
@@ -350,7 +335,7 @@ f.gamma.function <- function (dis, key.scale, key.shape) {
 for (i in 2:nt) {
   print(i)
   
-  #Rprof("path_to_hold_output")
+  Rprof("path_to_hold_output")
   ##################### RJ step : sequential proposals to switch to another randomly selected model #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
@@ -542,8 +527,9 @@ for (i in 2:nt) {
   # visit random effect coefficients
   
   den <- log.lik.fct(c(rj.cursigs, curparam))
+  u <- rnorm(length(curparam), 0, 0.4)
   for (m in 9:length(curparam)) {
-    newparam[m] <- curparam[m] + rnorm(1, 0, 0.4)
+    newparam[m] <- curparam[m] + u[m]
     num <- log.lik.fct(c(rj.cursigs, newparam))
     A   <- min(1, exp(num-den))
     if (runif(1) <= A) {
@@ -568,7 +554,7 @@ for (i in 2:nt) {
     save(det.param, file = 'msyt.param.RData')
     save(count.param, file = 'count.param.RData')
   }
-  #Rprof(NULL)
+  Rprof(NULL)
 } # end of iteration
 
 
