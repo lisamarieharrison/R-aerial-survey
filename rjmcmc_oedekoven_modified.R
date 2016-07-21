@@ -123,7 +123,6 @@ det.prop.mean <- c(138.60, 10, rnorm(16, 0, 1))
 det.prop.sd <- c(1.41, 0.84, rep(0.1, 16))
 
 # proposal distribution for the fixed effect density model parameters
-# 1. for covey data
 count.prop.mean <- c(-13.06, rnorm(6, 0, 1), 0)
 count.prop.sd <- c(0.30, rep(0.1, 6), 1)
 
@@ -246,7 +245,7 @@ calcFe <- function (x, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
 }
 
 #function to calculate the poisson likelihood of counts for each visit
-poissonLik <- function (x, int, b, yea, sea, efa) {
+poissonLik <- function (x, int, b, yea, sea) {
   
   count_i <- counts[x["Visit"]] #count for visit i
   
@@ -333,11 +332,11 @@ f.gamma.function <- cmpfun(f.gamma.function)
 # row 1 is filled in with initial values for parameters and models
 for (i in 2:nt) {
   
-  if (i %% 10 == 0) {
-    print(i)
-  }
+  # if (i %% 10 == 0) {
+  #   print(i)
+  # }
   
-  Rprof("path_to_hold_output")
+  #Rprof("path_to_hold_output")
   ##################### RJ step : sequential proposals to switch to another randomly selected model #####
   # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
   
@@ -393,11 +392,11 @@ for (i in 2:nt) {
   
   #fill in indeces for parameters that were not in the old model but are in the new one
   added_indeces <- cur.par - new.par == -1
-  rj.newparam[added_indeces] <- rnorm(sum(added_indeces), count.prop.mean[added_indeces], count.prop.sd[added_indeces])
+  rj.newparam[1:8][added_indeces] <- rnorm(sum(added_indeces), count.prop.mean[added_indeces], count.prop.sd[added_indeces])
   
   #remove parameters that are in the old model but are not in the new one
   removed_indeces <- new.par - cur.par == -1
-  rj.newparam[removed_indeces] <- 0
+  rj.newparam[1:8][removed_indeces] <- 0
   
   num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[added_indeces], -1, 1) + sum(log(dnorm(rj.newparam[removed_indeces], count.prop.mean[removed_indeces], count.prop.sd[removed_indeces])))
   den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[added_indeces], count.prop.mean[added_indeces], count.prop.sd[added_indeces]))) + l.prior(rj.newparam[removed_indeces], -1, 1)
@@ -446,7 +445,7 @@ for (i in 2:nt) {
   }
   
   # for each coefficient in the scale parameter:
-  indeces <- which(mh.cursigs != 0)
+  indeces <- which(mh.cursigs[3:length(mh.cursigs)] != 0) + 2
   den_ll <- log.lik.fct(c(mh.cursigs, rj.curparam))
   
   for (ip in indeces) {
@@ -489,7 +488,7 @@ for (i in 2:nt) {
   }
   
   # loop through each parameter
-  indeces <- which(curparam[1:8] != 0)
+  indeces <- which(curparam[2:8] != 0) + 1
   den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
   for (m in indeces) {
     
@@ -552,7 +551,7 @@ for (i in 2:nt) {
     save(det.param, file = 'msyt.param.RData')
     save(count.param, file = 'count.param.RData')
   }
-  Rprof(NULL)
+  #Rprof(NULL)
 } # end of iteration
 
 
