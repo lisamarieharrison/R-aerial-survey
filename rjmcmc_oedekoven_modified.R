@@ -43,6 +43,8 @@ visit_tab[31, ] <- c(NA, unique(dat$Season[as.numeric(dat$Date) == 31]), NA, NA,
 counts <- rep(0, max(covey.d$Visit))
 counts[unique(covey.d$Visit)] <- table(covey.d$Visit)
 
+rm(dat)
+
 #-----------------------------------------------------------------
 # LN: This section is mostly specific to the case study in the ms
 #     We will only have one site and no points
@@ -88,6 +90,8 @@ b0 <- rnorm(j, 0, std.ran0)
 # number of iterations
 nt <- 100000 #fewer iterations for testing
 
+df_size <- 100
+
 #-------------------------------------------------------------------------
 # LN: Indexing here is specific to the case study
 #     Will need to adapt it to match the shark data
@@ -98,22 +102,22 @@ nt <- 100000 #fewer iterations for testing
 # 15 colums due to 15 parameters in full model: hazard-rate det fct with covariates: year, type and state
 # for det model we have 23 parameters: scale, shape, year(3), season(3), sea_state(3), cloud(9), water_clarity(3)
 # for count model we have 7 parameters: intercept, year(3) and season(3)
-det.param <- matrix(NA, nt+1, 18)
+det.param <- matrix(NA, df_size + 1, 18)
 
 # for an intercept only model:
-det.param[1, ] <- c(scale0, shape0, rep(0, 16))
+det.param[2, ] <- c(scale0, shape0, rep(0, 16))
 
 # holds the model id number for detection function for each iteration, 
-det.model <- matrix(NA, nt+1, 1)            # refers to det.list
+det.model <- matrix(NA, df_size + 1, 1)            # refers to det.list
 
 # the matrix that will keep the parameter values for the density model
-count.param <- matrix(NA, nt+1, 8 + j)
+count.param <- matrix(NA, df_size + 1, 8 + j)
 
 # filling in the initial values
-count.param[1, ] <- c(int0, rep(0, 6), std.ran0, b0)
+count.param[2, ] <- c(int0, rep(0, 6), std.ran0, b0)
 
 # holds the model id number for density model for each iteration
-count.model <- matrix(NA, nt+1, 1)          # refers to count.list
+count.model <- matrix(NA, df_size + 1, 1)          # refers to count.list
 
 ############# proposal distributions
 # proposal distributions for detection function parameters:
@@ -154,19 +158,19 @@ count.list[3, ] <- c(rep(1, 8))                   # all variables
 count.list[4, ] <- c(1, rep(0, 6), 1)             # null model
 
 ################## picking the first model for detection function
-det.model[1, 1] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
-cur.dmod <- det.model[1, 1]
+det.model[2] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
+cur.dmod <- det.model[2]
 # holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
-rj.cursigs <- det.param[1, ]
+rj.cursigs <- det.param[2, ]
 
 
 ################## picking the first model for density model
 # there are 16 models (all of them include random effect for Pair2):
 # to pick the first model:
-count.model[1] <- sample(1:nrow(count.list), size = 1)   # randomly choose a model to start with
-cur.mod <- count.model[1]
+count.model[2] <- sample(1:nrow(count.list), size = 1)   # randomly choose a model to start with
+cur.mod <- count.model[2]
 # holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
-rj.curparam <- count.param[1, ]
+rj.curparam <- count.param[2, ]
 
 
 #set prior min and max
@@ -341,13 +345,11 @@ Rprof("path_to_hold_output")
 #################################  the RJMCMC algorithm ######################################
 # nt is the number of iterations and is set above
 # row 1 is filled in with initial values for parameters and models
-for (i in 2:nt) {
+for (i in 1:nt) {
   
   tryCatch({
-    
-    if (i %% 100 == 0) {
-      print(i)
-    }
+
+    index <- i %% df_size + 2
     
     ##################### RJ step : sequential proposals to switch to another randomly selected model #####
     # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
@@ -356,7 +358,7 @@ for (i in 2:nt) {
     ############## the detection function  ########################
     
     # the current model
-    cur.dmod <- det.model[i - 1]
+    cur.dmod <- det.model[index - 1]
     curpa <- det.list[cur.dmod, ]
     
     new_model <- sample(x = (1:nrow(det.list))[-cur.dmod], size = 1) #current model can't be chosen again
@@ -387,14 +389,14 @@ for (i in 2:nt) {
     
     
     # record the model selection for the det fct in det.model for the i'th iteration
-    det.model[i] <- cur.dmod
+    det.model[index] <- cur.dmod
     
     
     #################### RJ step for density model ##################################
     rj.newparam <- rj.curparam
     
     # the current model:
-    cur.mod <- count.model[i - 1]
+    cur.mod <- count.model[index - 1]
     
     #choose a new model
     new_model <- sample(x = (1:nrow(count.list))[-cur.mod], size = 1) #current model can't be chosen again
@@ -423,7 +425,7 @@ for (i in 2:nt) {
     }
     
     # record which model we ended up with
-    count.model[i] <- cur.mod
+    count.model[index] <- cur.mod
     
     ########################## Metropolis Hastings update ########################################################
     
@@ -478,7 +480,7 @@ for (i in 2:nt) {
     
     
     # fill in the new parameter values
-    det.param[i, ] <- mh.cursigs
+    det.param[index, ] <- mh.cursigs
     rj.cursigs <- mh.cursigs
     
     
@@ -551,22 +553,31 @@ for (i in 2:nt) {
     
     
     # saving the new parameter values of the density model in count.param
-    count.param[i, ] <- curparam
+    count.param[index, ] <- curparam
     
     rj.curparam <- curparam
     rj.newparam <- curparam
     
     # saving the parameter matrices ever 1000 iterations
-    if (i %% 1000 == 0) {
-      write.table(cbind(det.model, count.model), "models.csv", append = TRUE, row.names = F)
-      write.table(det.param, 'det.param.csv', append = TRUE, row.names = F)
-      write.table(count.param, 'count.param.csv', append = TRUE, row.names = F)
+    if ((i + 1) %% df_size == 0) {
+      
+      print(i + 1)
+      
+      write.table(cbind(det.model, count.model), "models.csv", append = TRUE, row.names = F, col.names = F, sep = ",")
+      write.table(det.param, 'det.param.csv', append = TRUE, row.names = F, col.names = F, sep = ",")
+      write.table(count.param, 'count.param.csv', append = TRUE, row.names = F, col.names = F, sep = ",")
+      
+      det.model[1] <- det.model[index]
+      count.model[1] <- count.model[index]
+      det.param[1, ] <- det.param[index, ]
+      count.param[1, ] <- count.param[index, ]
+      
     }
   }
   ,
   error = function(err) {
-    i <- i - 1
     print(paste("Retrying run", i))
+    i <- i - 1
   }
   )
 } # end of iteration 
