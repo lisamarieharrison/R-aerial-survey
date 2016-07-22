@@ -71,11 +71,11 @@ line_length <- 26500 #m
 ########################################  set initial values ##############
 
 # global hazard-rate model with scale and shape for L_y(\bmath{\theta}) (eqn 2.3)
-scale0 <- 210
-shape0 <- 10
+scale0 <- 300
+shape0 <- 15
 
 #  count model parameters: intercept and random effect standard deviation for L_n(\bmath{\beta}|\bmath{\theta}) (eqn (6))
-int0 <- -9
+int0 <- -5
 std.ran0 <- 1
 
 # the random effect coefficients b_j
@@ -86,7 +86,7 @@ b0 <- rnorm(j, 0, std.ran0)
 # setting up the matrices that will contain the paramter values;
 
 # number of iterations
-nt <- 1000 #fewer iterations for testing
+nt <- 100000 #fewer iterations for testing
 
 #-------------------------------------------------------------------------
 # LN: Indexing here is specific to the case study
@@ -289,8 +289,8 @@ log.lik.fct <- function (p) {
   #------------------------------------------------------------------------------
   # LN: Reasoning for 1 & 2 found in paragraph following eqn. 2.5
   #------------------------------------------------------------------------------
-
-
+  
+  
   # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
   fe <- apply(cd, 1, calcFe, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss)
   
@@ -336,229 +336,240 @@ f.gamma.function <- cmpfun(f.gamma.function)
 
 Rprof("path_to_hold_output")
 
+
+
 #################################  the RJMCMC algorithm ######################################
 # nt is the number of iterations and is set above
 # row 1 is filled in with initial values for parameters and models
 for (i in 2:nt) {
   
-  if (i %% 100 == 0) {
-    print(i)
-  }
-  
-  ##################### RJ step : sequential proposals to switch to another randomly selected model #####
-  # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
-  
-  
-  ############## the detection function  ########################
-  
-  # the current model
-  cur.dmod <- det.model[i - 1]
-  curpa <- det.list[cur.dmod, ]
-  
-  new_model <- sample(x = (1:nrow(det.list))[-cur.dmod], size = 1) #current model can't be chosen again
-  newpa <- det.list[new_model, ]
-  rj.newsigs <- rj.cursigs
-  
-  
-  #fill in indeces for parameters that were not in the old model but are in the new one
-  added_indeces <- curpa - newpa == -1
-  rj.newsigs[added_indeces] <- rnorm(sum(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
-  
-  #remove parameters that are in the old model but are not in the new one
-  removed_indeces <- newpa - curpa == -1
-  rj.newsigs[removed_indeces] <- 0
-  
-  num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
-  den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
-  
-  #check whether the new model is accepted
-  A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
-  if (runif(1) <= A) {                           # if move is accepted change current values to new values
-    rj.cursigs <- rj.newsigs               
-    cur.dmod <- new_model #change to new model if accepted
+  tryCatch({
     
-  } else {                             
-    rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
-  }
-  
-  
-  # record the model selection for the det fct in det.model for the i'th iteration
-  det.model[i] <- cur.dmod
-  
-  
-  #################### RJ step for density model ##################################
-  rj.newparam <- rj.curparam
-  
-  # the current model:
-  cur.mod <- count.model[i - 1]
-  
-  #choose a new model
-  new_model <- sample(x = (1:nrow(count.list))[-cur.mod], size = 1) #current model can't be chosen again
-  cur.par <- count.list[cur.mod, ]
-  new.par <- count.list[new_model, ]
-  
-  
-  #fill in indeces for parameters that were not in the old model but are in the new one
-  added_indeces <- which(cur.par - new.par == -1)
-  rj.newparam[added_indeces] <- rnorm(length(added_indeces), count.prop.mean[added_indeces], count.prop.sd[added_indeces])
-  
-  #remove parameters that are in the old model but are not in the new one
-  removed_indeces <- which(new.par - cur.par == -1)
-  rj.newparam[removed_indeces] <- 0
-  
-  num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[added_indeces], -1, 1) + sum(log(dnorm(rj.newparam[removed_indeces], count.prop.mean[removed_indeces], count.prop.sd[removed_indeces])))
-  den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[added_indeces], count.prop.mean[added_indeces], count.prop.sd[added_indeces]))) + l.prior(rj.newparam[removed_indeces], -1, 1)
-  
-  #check if the new model is accepted
-  A <- min(1, exp(num - den))
-  if (runif(1) <= A) {                             
-    rj.curparam <- rj.newparam   #if accepted, update current model            
-    cur.mod <- new_model
-  } else {                             
-    rj.newparam <- rj.curparam     #if rejected, reset parameters
-  }
-  
-  # record which model we ended up with
-  count.model[i] <- cur.mod
-  
-  ########################## Metropolis Hastings update ########################################################
-  
-  ########## updating the detection function parameters
-  mh.newsigs <- rj.cursigs
-  mh.cursigs <- rj.cursigs
-  
-  # for scale intercept
-  u <- rnorm(1, 0, 3.5) 
-  if ((mh.cursigs[1] + u) > 1) {    
-    mh.newsigs[1] <- mh.cursigs[1] + u   # prevents scale intercept to become < 0
-    num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
-    den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
+    if (i %% 100 == 0) {
+      print(i)
+    }
+    
+    ##################### RJ step : sequential proposals to switch to another randomly selected model #####
+    # all models are considered equally likely, i.e. P(m|m') = P(m'|m) for all m' and m
+    
+    
+    ############## the detection function  ########################
+    
+    # the current model
+    cur.dmod <- det.model[i - 1]
+    curpa <- det.list[cur.dmod, ]
+    
+    new_model <- sample(x = (1:nrow(det.list))[-cur.dmod], size = 1) #current model can't be chosen again
+    newpa <- det.list[new_model, ]
+    rj.newsigs <- rj.cursigs
+    
+    
+    #fill in indeces for parameters that were not in the old model but are in the new one
+    added_indeces <- curpa - newpa == -1
+    rj.newsigs[added_indeces] <- rnorm(sum(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
+    
+    #remove parameters that are in the old model but are not in the new one
+    removed_indeces <- newpa - curpa == -1
+    rj.newsigs[removed_indeces] <- 0
+    
+    num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
+    den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
+    
+    #check whether the new model is accepted
+    A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
+    if (runif(1) <= A) {                           # if move is accepted change current values to new values
+      rj.cursigs <- rj.newsigs               
+      cur.dmod <- new_model #change to new model if accepted
+      
+    } else {                             
+      rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
+    }
+    
+    
+    # record the model selection for the det fct in det.model for the i'th iteration
+    det.model[i] <- cur.dmod
+    
+    
+    #################### RJ step for density model ##################################
+    rj.newparam <- rj.curparam
+    
+    # the current model:
+    cur.mod <- count.model[i - 1]
+    
+    #choose a new model
+    new_model <- sample(x = (1:nrow(count.list))[-cur.mod], size = 1) #current model can't be chosen again
+    cur.par <- count.list[cur.mod, ]
+    new.par <- count.list[new_model, ]
+    
+    
+    #fill in indeces for parameters that were not in the old model but are in the new one
+    added_indeces <- which(cur.par - new.par == -1)
+    rj.newparam[added_indeces] <- rnorm(length(added_indeces), count.prop.mean[added_indeces], count.prop.sd[added_indeces])
+    
+    #remove parameters that are in the old model but are not in the new one
+    removed_indeces <- which(new.par - cur.par == -1)
+    rj.newparam[removed_indeces] <- 0
+    
+    num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[added_indeces], -1, 1) + sum(log(dnorm(rj.newparam[removed_indeces], count.prop.mean[removed_indeces], count.prop.sd[removed_indeces])))
+    den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[added_indeces], count.prop.mean[added_indeces], count.prop.sd[added_indeces]))) + l.prior(rj.newparam[removed_indeces], -1, 1)
+    
+    #check if the new model is accepted
+    A <- min(1, exp(num - den))
+    if (runif(1) <= A) {                             
+      rj.curparam <- rj.newparam   #if accepted, update current model            
+      cur.mod <- new_model
+    } else {                             
+      rj.newparam <- rj.curparam     #if rejected, reset parameters
+    }
+    
+    # record which model we ended up with
+    count.model[i] <- cur.mod
+    
+    ########################## Metropolis Hastings update ########################################################
+    
+    ########## updating the detection function parameters
+    mh.newsigs <- rj.cursigs
+    mh.cursigs <- rj.cursigs
+    
+    # for scale intercept
+    u <- rnorm(1, 0, 3.5) 
+    if ((mh.cursigs[1] + u) > 1) {    
+      mh.newsigs[1] <- mh.cursigs[1] + u   # prevents scale intercept to become < 0
+      num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
+      den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
+      A <- min(1, exp(num-den))
+      if (runif(1) <= A) {
+        mh.cursigs <- mh.newsigs
+      } else {
+        mh.newsigs <- mh.cursigs
+      } 
+    }
+    
+    # for shape                  
+    mh.newsigs[2] <- mh.cursigs[2] + rnorm(1, 2, 0.2) #tweaked for gamma to stop the shape parameter becoming < 1
+    num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
+    den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
     A <- min(1, exp(num-den))
     if (runif(1) <= A) {
       mh.cursigs <- mh.newsigs
     } else {
       mh.newsigs <- mh.cursigs
-    } 
-  }
-  
-  # for shape                  
-  mh.newsigs[2] <- mh.cursigs[2] + rnorm(1, 2, 0.2) #tweaked for gamma to stop the shape parameter becoming < 1
-  num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
-  den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
-  A <- min(1, exp(num-den))
-  if (runif(1) <= A) {
-    mh.cursigs <- mh.newsigs
-  } else {
-    mh.newsigs <- mh.cursigs
-  }
-  
-  # for each coefficient in the scale parameter:
-  indeces <- which(mh.cursigs[3:length(mh.cursigs)] != 0) + 2
-  den_ll <- log.lik.fct(c(mh.cursigs, rj.curparam))
-  
-  for (ip in indeces) {
+    }
     
-    mh.newsigs[ip] <- mh.cursigs[ip] + rnorm(1, 0, 0.12)
-    num_ll <- log.lik.fct(c(mh.newsigs, rj.curparam))
-    num <-  num_ll + l.prior(mh.newsigs[ip], -1, 1)
-    den <-  den_ll + l.prior(mh.cursigs[ip], -1, 1)
-    A <- min(1, exp(num - den))
-    if (runif(1) <= A) {
-      mh.cursigs <- mh.newsigs
-      den_ll <- num_ll
-    } else {
-      mh.newsigs <- mh.cursigs
-    } 
+    # for each coefficient in the scale parameter:
+    indeces <- which(mh.cursigs[3:length(mh.cursigs)] != 0) + 2
+    den_ll <- log.lik.fct(c(mh.cursigs, rj.curparam))
     
-  }
-
-
-  # fill in the new parameter values
-  det.param[i, ] <- mh.cursigs
-  rj.cursigs <- mh.cursigs
-  
-  
-  
-  ######### updating the density model parameters #############
-  
-  curparam <- rj.curparam
-  newparam <- rj.curparam
-  
-  # the intercept
-  newparam[1] <- curparam[1] + rnorm(1, 0, 0.08) 
-  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -1, 1) #changed newparam to c(rj.cursigs, newparam)
-  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -1, 1) #changed curparam to c(rj.cursigs, curparam)
-  A <- min(1, exp(num - den))
-  if (runif(1) <= A) {
-    curparam[1] <- newparam[1]
-  } else {
-    newparam[1] <- curparam[1]
-  }
-  
-  # loop through each parameter
-  indeces <- which(curparam[2:8] != 0) + 1
-  den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
-  for (m in indeces) {
-    
-    u <- rnorm(1, 0, 0.25)
-    newparam[m] <- curparam[m] + u
-    num_ll <- log.lik.fct(c(rj.cursigs, newparam))
-    num <- num_ll + l.prior(newparam[m], -1, 1)
-    den <- den_ll + l.prior(curparam[m], -1, 1)
-    A <- min(1, exp(num - den))
-    V <- runif(1)
-    if (V <= A) {
-      curparam[m] <- newparam[m]
-      den_ll <- num_ll
-    } else {
-      newparam[m] <- curparam[m]
+    for (ip in indeces) {
+      
+      mh.newsigs[ip] <- mh.cursigs[ip] + rnorm(1, 0, 0.12)
+      num_ll <- log.lik.fct(c(mh.newsigs, rj.curparam))
+      num <-  num_ll + l.prior(mh.newsigs[ip], -1, 1)
+      den <-  den_ll + l.prior(mh.cursigs[ip], -1, 1)
+      A <- min(1, exp(num - den))
+      if (runif(1) <= A) {
+        mh.cursigs <- mh.newsigs
+        den_ll <- num_ll
+      } else {
+        mh.newsigs <- mh.cursigs
+      } 
+      
     }
     
     
-  }
-  
-  
-  # the visit random effect standard deviation
-  newparam[8] <- curparam[8] + max(rnorm(1, 0, 0.08), -newparam[8]) # cannot become 0 or less
-  num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
-  den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
-  A <- min(1, exp(num-den))
-  if (runif(1) <= A) {
-    curparam[8] <- newparam[8]
-  } else {
-    newparam[8] <- curparam[8]
-  } 
-  
-  # visit random effect coefficients
-  
-  den <- log.lik.fct(c(rj.cursigs, curparam))
-  u <- rnorm(length(curparam), 0, 0.4)
-  for (m in 9:length(curparam)) {
-    newparam[m] <- curparam[m] + u[m]
-    num <- log.lik.fct(c(rj.cursigs, newparam))
-    A   <- min(1, exp(num-den))
+    # fill in the new parameter values
+    det.param[i, ] <- mh.cursigs
+    rj.cursigs <- mh.cursigs
+    
+    
+    
+    ######### updating the density model parameters #############
+    
+    curparam <- rj.curparam
+    newparam <- rj.curparam
+    
+    # the intercept
+    newparam[1] <- curparam[1] + rnorm(1, 0, 0.08) 
+    num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -1, 1) #changed newparam to c(rj.cursigs, newparam)
+    den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -1, 1) #changed curparam to c(rj.cursigs, curparam)
+    A <- min(1, exp(num - den))
     if (runif(1) <= A) {
-      curparam[m] <- newparam[m]
-      den <- num
+      curparam[1] <- newparam[1]
     } else {
-      newparam[m] <- curparam[m]
+      newparam[1] <- curparam[1]
+    }
+    
+    # loop through each parameter
+    indeces <- which(curparam[2:8] != 0) + 1
+    den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
+    for (m in indeces) {
+      
+      u <- rnorm(1, 0, 0.25)
+      newparam[m] <- curparam[m] + u
+      num_ll <- log.lik.fct(c(rj.cursigs, newparam))
+      num <- num_ll + l.prior(newparam[m], -1, 1)
+      den <- den_ll + l.prior(curparam[m], -1, 1)
+      A <- min(1, exp(num - den))
+      V <- runif(1)
+      if (V <= A) {
+        curparam[m] <- newparam[m]
+        den_ll <- num_ll
+      } else {
+        newparam[m] <- curparam[m]
+      }
+      
+      
+    }
+    
+    
+    # the visit random effect standard deviation
+    newparam[8] <- curparam[8] + max(rnorm(1, 0, 0.08), -newparam[8]) # cannot become 0 or less
+    num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior.std.ran(newparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+    den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior.std.ran(curparam[8]) #changed log.ran.fct to log.lik.fct because not defined and probably the same
+    A <- min(1, exp(num-den))
+    if (runif(1) <= A) {
+      curparam[8] <- newparam[8]
+    } else {
+      newparam[8] <- curparam[8]
+    } 
+    
+    # visit random effect coefficients
+    
+    den <- log.lik.fct(c(rj.cursigs, curparam))
+    u <- rnorm(length(curparam), 0, 0.4)
+    for (m in 9:length(curparam)) {
+      newparam[m] <- curparam[m] + u[m]
+      num <- log.lik.fct(c(rj.cursigs, newparam))
+      A   <- min(1, exp(num-den))
+      if (runif(1) <= A) {
+        curparam[m] <- newparam[m]
+        den <- num
+      } else {
+        newparam[m] <- curparam[m]
+      }
+    }
+    
+    
+    # saving the new parameter values of the density model in count.param
+    count.param[i, ] <- curparam
+    
+    rj.curparam <- curparam
+    rj.newparam <- curparam
+    
+    # saving the parameter matrices ever 1000 iterations
+    if (i %% 1000 == 0) {
+      write.table(cbind(det.model, count.model), "models.csv", append = TRUE, row.names = F)
+      write.table(det.param, 'det.param.csv', append = TRUE, row.names = F)
+      write.table(count.param, 'count.param.csv', append = TRUE, row.names = F)
     }
   }
-  
-  
-  # saving the new parameter values of the density model in count.param
-  count.param[i, ] <- curparam
-  
-  rj.curparam <- curparam
-  rj.newparam <- curparam
-  
-  # saving the parameter matrices ever 1000 iterations
-  if (i %% 1000 == 0) {
-    write.table(cbind(det.model, count.model), "models.csv", append = TRUE, row.names = F)
-    write.table(det.param, 'det.param.csv', append = TRUE, row.names = F)
-    write.table(count.param, 'det.param.csv', append = TRUE, row.names = F)
+  ,
+  error = function(err) {
+    i <- i - 1
+    print(paste("Retrying run", i))
   }
-} # end of iteration
+  )
+} # end of iteration 
 
 Rprof(NULL)
 
