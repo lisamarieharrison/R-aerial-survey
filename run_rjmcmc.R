@@ -1,3 +1,7 @@
+#run multiple RJ-MCMC chains in runRjmcmc function in parallel and write output to separate files
+#author: Lisa-Marie Harrison
+#date: 25/07/2016
+
 library(doParallel)
 library(foreach)
 
@@ -16,6 +20,4 @@ foreach(chain=1:n_chains, scale0=c(100, 200), shape0=c(1, 10), int0 = c(1, 5)) %
 }
 
 stopCluster(cl)
-
-
 
