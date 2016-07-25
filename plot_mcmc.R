@@ -4,13 +4,13 @@
 
 setwd("C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
 
-model1 <- read.csv("models.csv", header = T)
+model1 <- read.csv("models1.csv", header = T)
 model2 <- read.csv("models2.csv", header = T)
 
-det_param1 <- read.csv("det.param.csv", header = T)
+det_param1 <- read.csv("det.param1.csv", header = T)
 det_param2 <- read.csv("det.param2.csv", header = T)
 
-count_param1 <- read.csv("count.param.csv", header = T)
+count_param1 <- read.csv("count.param1.csv", header = T)
 count_param2 <- read.csv("count.param2.csv", header = T)
 
 
