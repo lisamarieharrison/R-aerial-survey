@@ -338,7 +338,7 @@ f.gamma.function <- function (dis, key.scale, key.shape) {
 f.gamma.function <- cmpfun(f.gamma.function)
 
 
-Rprof("path_to_hold_output")
+#Rprof("path_to_hold_output")
 
 
 
@@ -582,7 +582,7 @@ for (i in 1:nt) {
   )
 } # end of iteration 
 
-Rprof(NULL)
+#Rprof(NULL)
 
 summaryRprof("path_to_hold_output")
 
