@@ -3,7 +3,7 @@
 #author: Lisa-Marie Harrison
 #date: 25/07/2016
 
-runRjmcmc <- function (chain) {
+runRjmcmc <- function (chain, scale0, shape0, int0) {
   
   library(compiler)
   library(tcltk)
@@ -51,13 +51,8 @@ runRjmcmc <- function (chain) {
   line_length <- 26500 #m
   
   ########################################  set initial values ##############
-  
-  # global hazard-rate model with scale and shape for L_y(\bmath{\theta}) (eqn 2.3)
-  scale0 <- 300
-  shape0 <- 15
-  
+
   #  count model parameters: intercept and random effect standard deviation for L_n(\bmath{\beta}|\bmath{\theta}) (eqn (6))
-  int0 <- -5
   std.ran0 <- 1
   
   # the random effect coefficients b_j
@@ -319,7 +314,7 @@ runRjmcmc <- function (chain) {
   
   
   #set up progress bar
-  pb <- tkProgressBar(max=100)
+  pb <- tkProgressBar(max=nt, title = paste("Chain", chain))
   progress <- function(n) {
     setTkProgressBar(pb, n)
   }
