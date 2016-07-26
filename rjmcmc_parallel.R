@@ -57,7 +57,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   line_length <- 26500 #m
   
   ########################################  set initial values ##############
-
+  
   #  count model parameters: intercept and random effect standard deviation for L_n(\bmath{\beta}|\bmath{\theta}) (eqn (6))
   std.ran0 <- 1
   
@@ -226,7 +226,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
                                 sig.cc[x[5] + 1] +  
                                 sig.wc[x[6]])
     
-    fe <- log(f.gamma.function(x[3], scale_param, sha2))
+    fe <- log(f.gamma.function(x[3], scale=scale_param, shape=sha2))
     
     return (fe)
     
@@ -306,13 +306,29 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   }
   
   # gamma detection function from the mrds package: keyfct.gamma
-  f.gamma.function <- function (dis, key.scale, key.shape) {
+  # f.gamma.function <- function (dis, key.scale, key.shape) {
+  #   
+  #   fr <- (1/gamma(key.shape)) * (((key.shape - 1)/exp(1))^(key.shape - 1))
+  #   v1 <- dis/(key.scale * fr)
+  #   return(v1^(key.shape-1)*exp(-v1)/(gamma(key.shape)*fr))
+  #   
+  # }
+  
+  #gamma pdf
+  f.gamma.function <- function (distance, shape, scale) {
     
-    fr <- (1/gamma(key.shape)) * (((key.shape - 1)/exp(1))^(key.shape - 1))
-    v1 <- dis/(key.scale * fr)
-    return(v1^(key.shape-1)*exp(-v1)/(gamma(key.shape)*fr))
+    if (shape > 150) {
+      stop(paste("Shape parameter of ", shape, "is outside the range of the gamma function"))
+    }
+    
+    num <- distance^(shape - 1) * exp(-distance/scale)
+    den <- scale^shape * gamma(shape)
+    
+    return(num/den)
     
   }
+  
+  
   f.gamma.function <- cmpfun(f.gamma.function)
   
   
@@ -544,7 +560,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
         print(paste("Chain", chain, "- Iteration", i + 1))
         
         progress(i) #iterate progress bar
-
+        
         write.table(cbind(det.model, count.model), paste0("models", chain ,".csv"), append = TRUE, row.names = F, col.names = F, sep = ",")
         write.table(det.param, paste0("det.param", chain, ".csv"), append = TRUE, row.names = F, col.names = F, sep = ",")
         write.table(count.param, paste0("count.param", chain, ".csv"), append = TRUE, row.names = F, col.names = F, sep = ",")
