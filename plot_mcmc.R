@@ -70,7 +70,40 @@ gelman.rubin(cbind(det_param1[1:10000, 1], det_param2[1:10000, 1]))
 #plot detection function over histogram of distances
 #distances scaled by expected count
 
-best_model <- as.numeric(names(which.max(rowMeans(table(det_models[, 1], det_models[, 2])))))
+
+
+if (Sys.info()[4] == "SCI-6246") {
+  setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
+  source_location <- "~/Lisa/phd/Mixed models/R code/R-functions-southern-ocean/"
+} else {
+  setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/data")
+  source_location <- "~/phd/southern ocean/Mixed models/R code/R-functions-southern-ocean/"
+}
+
+dat <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
+dat$Year <- as.numeric(substr(as.character(dat$Date), nchar(as.character(dat$Date)) - 3, nchar(as.character(dat$Date))))
+covey.d <- dat[dat$Species == "BOT" & !is.na(dat$Dist..from.transect) & dat$Secondary != "Y" & dat$Observer == "Lisa", c("Date", "Season", "Dist..from.transect", "Beaufort.Sea.State", "Cloud.cover", "Water.clarity", "Flight.Direction")]
+covey.d$Date <- as.character(covey.d$Date)
+covey.d$Year <- as.numeric(substr(covey.d$Date, nchar(covey.d$Date) - 3, nchar(covey.d$Date))) #extract year from date
+names(covey.d) <- c("Date", "Season", "Distance", "Sea_state", "Cloud_cover", "Water_clarity", "Flight.Direction", "Year")
+covey.d$Id <- 1:nrow(covey.d)
+covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
+covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
+covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Flight.Direction == "S", ] #truncate to 1km
+
+
+f.gamma.function <- function (distance, shape, scale) {
+  
+  if (shape > 150) {
+    stop(paste("Shape parameter of ", shape, "is outside the range of the gamma function"))
+  }
+  
+  num <- distance^(shape - 1) * exp(-distance/scale)
+  den <- scale^shape * gamma(shape)
+  
+  return(num/den)
+  
+}
 
 det.param <- as.matrix(na.omit(det_param1))
 
