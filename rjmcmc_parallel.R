@@ -18,13 +18,14 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   
   dat <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
   dat$Year <- as.numeric(substr(as.character(dat$Date), nchar(as.character(dat$Date)) - 3, nchar(as.character(dat$Date))))
-  covey.d <- dat[dat$Species == "BOT" & !is.na(dat$Dist..from.transect) & dat$Secondary != "Y" & dat$Observer == "Lisa", c("Date", "Season", "Dist..from.transect", "Beaufort.Sea.State", "Cloud.cover", "Water.clarity")]
+  covey.d <- dat[dat$Species == "BOT" & !is.na(dat$Dist..from.transect) & dat$Secondary != "Y" & dat$Observer == "Lisa", c("Date", "Season", "Dist..from.transect", "Beaufort.Sea.State", "Cloud.cover", "Water.clarity", "Flight.Direction")]
   covey.d$Date <- as.character(covey.d$Date)
   covey.d$Year <- as.numeric(substr(covey.d$Date, nchar(covey.d$Date) - 3, nchar(covey.d$Date))) #extract year from date
-  names(covey.d) <- c("Date", "Season", "Distance", "Sea_state", "Cloud_cover", "Water_clarity", "Year")
+  names(covey.d) <- c("Date", "Season", "Distance", "Sea_state", "Cloud_cover", "Water_clarity", "Flight.Direction", "Year")
   covey.d$Id <- 1:nrow(covey.d)
   covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
   covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
+  covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Flight.Direction == "S", ] #truncate to 1km
   
   length.d <- length(covey.d$Distance)
   
@@ -32,7 +33,12 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   cd <- data.matrix(covey.d) #required for apply functions
   
   visit_tab <- data.matrix(covey.d[match(1:max(covey.d$Visit), covey.d$Visit), ])
-  visit_tab[31, ] <- c(NA, unique(dat$Season[as.numeric(dat$Date) == 31]), NA, NA, NA, NA, unique(dat$Year[as.numeric(dat$Date) == 31]),  NA, 31)
+  
+  for (day in which(is.na(visit_tab[, 10]))) {
+    
+    visit_tab[day, ] <- c(NA, unique(dat$Season[as.numeric(dat$Date) == day]), NA, NA, NA, NA, NA, unique(dat$Year[as.numeric(dat$Date) == day]),  NA, day)
+    
+  }
   counts <- rep(0, max(covey.d$Visit))
   counts[unique(covey.d$Visit)] <- table(covey.d$Visit)
   
@@ -97,14 +103,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   ############# proposal distributions
   # proposal distributions for detection function parameters:
   
-  # 1. for main analysis and prior sensitivity analysis
-  det.prop.mean <- c(200, 9, rnorm(16, 0, 1))
-  det.prop.sd <- c(1.41, 0.84, rep(0.1, 16))
-  
-  # proposal distribution for the fixed effect density model parameters
-  count.prop.mean <- c(-10, rnorm(6, 0, 1), 0)
-  count.prop.sd <- c(0.30, rep(0.1, 6), 1)
-  
   msyt.prop.mean <- c(1, rep(0.5, 21))
   msyt.prop.sd <- rep(0.5, 22)
   
@@ -138,6 +136,12 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   # holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
   rj.cursigs <- det.param[2, ]
   
+  # set prior mean and sd
+  det.prop.mean <- c(5, 1, rnorm(16, 0, 1))
+  det.prop.sd <- c(1, 1, rep(0.1, 16))
+  count.prop.mean <- c(1, rnorm(6, 0, 1), 0)
+  count.prop.sd <- c(1, rep(0.1, 6), 1)
+  
   
   ################## picking the first model for density model
   # there are 16 models (all of them include random effect for Pair2):
@@ -146,7 +150,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   cur.mod <- count.model[2]
   # holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
   rj.curparam <- count.param[2, ]
-  
   
   #set prior min and max
   #currently uniform uninformative priors
