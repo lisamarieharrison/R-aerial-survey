@@ -137,7 +137,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   rj.cursigs <- det.param[2, ]
   
   # set proposal mean and sd
-  det.prop.mean <- c(400, 5, rnorm(16, 0, 1))
+  det.prop.mean <- c(320, 3.6, rnorm(16, 0, 1))
   det.prop.sd <- c(1, 0.5, rep(0.1, 16))
   count.prop.mean <- c(1, rnorm(6, 0, 1), 0)
   count.prop.sd <- c(1, rep(0.1, 6), 1)
@@ -164,7 +164,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   l.prior.sig <- function(sigm) {
     log.u.sig<-array(NA,length(sigm))
     for (k in 1:length(sigm)) {
-      log.u.sig[k] <- log(dunif(sigm[k], 200, 600))                                
+      log.u.sig[k] <- log(dunif(sigm[k], 250, 400))                                
     }
     return(sum(log.u.sig))
   }
@@ -173,7 +173,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   l.prior.sha<-function(shap){
     log.u.sha<-array(NA,length(shap))
     for (k in 1:length(shap)){
-      log.u<-log(dunif(shap[k], 1, 10))
+      log.u<-log(dunif(shap[k], 2, 5))
       if (is.infinite(log.u)) {
         log.u.sha[k]<- -100000
       } else {
