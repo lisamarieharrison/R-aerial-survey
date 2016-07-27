@@ -136,9 +136,9 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   # holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
   rj.cursigs <- det.param[2, ]
   
-  # set prior mean and sd
-  det.prop.mean <- c(5, 1, rnorm(16, 0, 1))
-  det.prop.sd <- c(1, 1, rep(0.1, 16))
+  # set proposal mean and sd
+  det.prop.mean <- c(400, 5, rnorm(16, 0, 1))
+  det.prop.sd <- c(1, 0.5, rep(0.1, 16))
   count.prop.mean <- c(1, rnorm(6, 0, 1), 0)
   count.prop.sd <- c(1, rep(0.1, 6), 1)
   
@@ -164,7 +164,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   l.prior.sig <- function(sigm) {
     log.u.sig<-array(NA,length(sigm))
     for (k in 1:length(sigm)) {
-      log.u.sig[k] <- log(dunif(sigm[k], 1, 500))                                
+      log.u.sig[k] <- log(dunif(sigm[k], 200, 600))                                
     }
     return(sum(log.u.sig))
   }
@@ -173,7 +173,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   l.prior.sha<-function(shap){
     log.u.sha<-array(NA,length(shap))
     for (k in 1:length(shap)){
-      log.u<-log(dunif(shap[k], 1, 20))
+      log.u<-log(dunif(shap[k], 1, 10))
       if (is.infinite(log.u)) {
         log.u.sha[k]<- -100000
       } else {
@@ -305,28 +305,28 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
     return(f)
   }
   
-  # gamma detection function from the mrds package: keyfct.gamma
-  # f.gamma.function <- function (dis, key.scale, key.shape) {
+  #gamma detection function from the mrds package: keyfct.gamma
+  f.gamma.function <- function (distance, scale, shape) {
+
+    fr <- (1/gamma(shape)) * (((shape - 1)/exp(1))^(shape - 1))
+    v1 <- distance/(scale * fr)
+    return(v1^(shape-1)*exp(-v1)/(gamma(shape)*fr))
+
+  }
+  
+  # #gamma pdf
+  # f.gamma.function <- function (distance, shape, scale) {
   #   
-  #   fr <- (1/gamma(key.shape)) * (((key.shape - 1)/exp(1))^(key.shape - 1))
-  #   v1 <- dis/(key.scale * fr)
-  #   return(v1^(key.shape-1)*exp(-v1)/(gamma(key.shape)*fr))
+  #   if (shape > 150) {
+  #     stop(paste("Shape parameter of ", shape, "is outside the range of the gamma function"))
+  #   }
+  #   
+  #   num <- distance^(shape - 1) * exp(-distance/scale)
+  #   den <- scale^shape * gamma(shape)
+  #   
+  #   return(num/den)
   #   
   # }
-  
-  #gamma pdf
-  f.gamma.function <- function (distance, shape, scale) {
-    
-    if (shape > 150) {
-      stop(paste("Shape parameter of ", shape, "is outside the range of the gamma function"))
-    }
-    
-    num <- distance^(shape - 1) * exp(-distance/scale)
-    den <- scale^shape * gamma(shape)
-    
-    return(num/den)
-    
-  }
   
   
   f.gamma.function <- cmpfun(f.gamma.function)
