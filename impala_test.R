@@ -3,8 +3,6 @@
 #author: Lisa-Marie Harrison
 #date: 25/07/2016
 
-library(compiler)
-
 dat <- list(y=
               c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
@@ -75,7 +73,9 @@ init <- list(theta = 1, psi = 0.8, z = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
 
 
 
-########################################  set initial values ###########################
+library(compiler)
+
+########################################  set initial values ##############
 
 nind <- 73 #73 individuals
 nz <- 300
@@ -84,18 +84,15 @@ nz <- 300
 nt <- 20000
 
 #initial parameters
-theta <- init$theta
-psi   <- init$psi
+cur_theta <- init$theta
+cur_psi   <- init$psi
 z <- init$z
 dat$x[(nind+1):length(dat$x)] <- runif(nz, 0, 4)
-x <- dat$x
-y <- dat$y
 
 #matrix to hold parameter estimates
 par <- matrix(NA, nrow = nt + 1, ncol = 4)
 colnames(par) <- c("theta", "phi", "N", "D")
 par[1, ] <- c(cur_theta, cur_psi, NA, NA)
-
 
 ############################### the priors ###########################################################
 
@@ -111,6 +108,38 @@ l.prior.psi <- function (p) {
   psi.prior <- log(dunif(p, 0, 1))
   
   return (psi.prior)
+  
+}
+
+########################## the likelihood function ######################
+
+log.lik.fct <- function (p) {
+  
+  theta <- p[1] # theta
+  psi   <- p[2] # psi
+  
+  z <- rbinom(nind+nz, 1, psi) # latent indicator variables from data augmentation
+  y <- NULL
+  x <- dat$x
+  x[(nind+1):length(x)] <- runif(nz, 0, 4)
+  p    <- f.hn.function(x, theta)
+  mu   <- z * p
+  for (j in 1:length(mu)) {
+    y[j] <- rbinom(1, 1, mu[j])
+  }
+  
+  #detection function likelihood 
+  l.det <- log(f.hn.function(dat$x, theta))
+  
+  #count likelihood 
+  l.count <- log(dbinom(sum(y), sum(z), mean(mu[mu != 0])))
+  
+  loglik <- l.count + sum(l.det)
+  if (is.infinite(loglik)) {
+    loglik <- -100000
+  }
+  
+  return(loglik)
   
 }
 
@@ -134,34 +163,41 @@ for (i in 2:nt) {
     print(i)
   }
   
-  # sample theta
-  dists <- NULL
-  for (j in 1: length(seq(0, 10, by = 0.01))) {
-    dists[j] <- mean(f.hn.function(x, seq(0, 10, by = 0.01)[j]))
+  ######### updating the density model parameters #############
+  
+  # theta
+  new_theta <- cur_theta + rnorm(1, 0, 0.05) 
+  num <- log.lik.fct(c(new_theta, cur_psi)) + l.prior.theta(new_theta) 
+  den <- log.lik.fct(c(cur_theta, cur_psi)) + l.prior.theta(cur_theta) 
+  A <- min(1, exp(num-den))
+  if (runif(1) <= A) {
+    cur_theta <- new_theta #if accepted, update current parameters
+  } 
+  
+  ######### updating the count model parameters #############
+  
+  # psi
+  new_psi <- cur_psi + rnorm(1, 0, 0.01) # must be 0 - 1
+  while (new_psi <=0 | new_psi >= 1) {
+    new_psi <- cur_psi + rnorm(1, 0, 0.01) 
   }
-  theta <- seq(0, 10, by = 0.01)[which.max(dbinom(sum(dat$y), sum(z), dists*psi))] 
-
-  # sample psi
-  psi <- seq(0, 1, by = 0.01)[which.max(dbinom(sum(dat$y), sum(z), mean(f.hn.function(x, theta))*seq(0, 1, by = 0.01)))]
-
+  num <- log.lik.fct(c(cur_theta, new_psi)) + l.prior.psi(new_psi)
+  den <- log.lik.fct(c(cur_theta, cur_psi)) + l.prior.psi(cur_psi)
+  A <- min(1, exp(num - den))
+  if (runif(1) <= A) {
+    cur_psi <- new_psi #if accepted, update current parameters
+  } 
+  
   ######### data augmentation #############
   
-  z <- rbinom(nind+nz, 1, psi) # latent indicator variables from data augmentation
-  y <- NULL
-  x <- dat$x
-  x[(nind+1):length(x)] <- runif(nz, 0, 4)
-  p    <- f.hn.function(x, theta)
-  mu   <- z * p
-  for (j in 1:length(mu)) {
-    y[j] <- rbinom(1, 1, mu[j])
-  }
+  z <- rbinom(nind+nz, 1, cur_psi) # latent indicator variables from data augmentation
   
   N <- sum(z)
   D <- N / 48 # 48 km*km = total area of transects
   
   
   #save estimates
-  par[i, ] <- c(theta, psi, N, D)
+  par[i, ] <- c(cur_theta, cur_psi, N, D)
   
 } # end of iteration 
 
@@ -180,4 +216,3 @@ summary_tab <- cbind(colMeans(par), apply(par, 2, sd))
 rownames(summary_tab) <- c("theta", "psi", "N", "D")
 colnames(summary_tab) <- c("mean", "sd")
 summary_tab
-
