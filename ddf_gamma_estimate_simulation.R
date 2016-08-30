@@ -2,6 +2,7 @@
 #author: Lisa-Marie Harrison
 #date: 26/08/2016
 
+library(mrds)
 set.seed(123)
 gdata<-data.frame(object=1:1000,distance=rgamma(1000,scale=1,shape=1))
 
