@@ -15,12 +15,14 @@ count_param2 <- read.csv("count.param2.csv", header = T)
 
 
 #detection model scale (depends on other covariates too)
+det_param1 <- na.omit(det_param1)
+det_param2 <- na.omit(det_param2)
 plot(det_param1[, 1], type = "l", main = "Gamma detection function - scale", xlab = "iteration", ylab = "scale", ylim = c(min(det_param1[, 1], det_param2[, 1]), max(det_param1[, 1], det_param2[, 1])))
 points(det_param2[, 1], type = "l", col = "red")
 
 
 #detection model shape 
-plot(det_param1[, 2], type = "l", main = "Gamma detection function - shape", xlab = "iteration", ylab = "shape")
+plot(det_param1[, 2], type = "l", main = "Gamma detection function - shape", xlab = "iteration", ylab = "shape", ylim = c(min(det_param1[, 2], det_param2[, 2]), max(det_param1[, 2], det_param2[, 2])))
 points(det_param2[, 2], type = "l", col = "red")
 
 #count model intercept
@@ -105,12 +107,13 @@ det.param <- as.matrix(na.omit(det_param1))
 hist.obj <- hist(covey.d$Distance, plot = FALSE)
 
 #calculate scale averaged across all parameter levels
-calc_scale <- det.param[nrow(det.param) - 1, 1] * exp(mean(c(0, det.param[nrow(det.param) - 1, 3:4])) +
-                                                        mean(c(0, det.param[nrow(det.param) - 1, 5:6])) +
-                                                        mean(c(0, det.param[nrow(det.param) - 1, 7:8])) +
-                                                        mean(c(0, det.param[nrow(det.param) - 1, 9:16])) +
-                                                        mean(c(0, det.param[nrow(det.param) - 1, 17:18])))
+calc_scale <- det.param[nrow(det.param) - 1, 1] * exp(mean(c(0, det.param[, 3:4])) +
+                                                        mean(c(0, det.param[, 5:6])) +
+                                                        mean(c(0, det.param[, 7:8])) +
+                                                        mean(c(0, det.param[, 9:16])) +
+                                                        mean(c(0, det.param[, 17:18])))
 
+shape <- det.param[nrow(det.param) - 1, 2]
 
 nc <- length(hist.obj$mids)
 pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), scale=calc_scale, shape=det.param[nrow(det.param) - 1, 2])$value/max(covey.d$Distance)
@@ -120,7 +123,7 @@ expected.counts <- (breaks[2:(nc+1)]-breaks[1:nc])*(Nhat/breaks[nc+1])
 
 
 nc <- length(breaks)-1
-pdot <- f.gamma.function(covey.d$Distance, scale=det.param[nrow(det.param) - 1, 1], shape=det.param[nrow(det.param) - 1, 2])
+pdot <- f.gamma.function(covey.d$Distance, scale=calc_scale, shape=shape)
 Nhat <- sum(1/pdot)
 
 
@@ -130,5 +133,5 @@ hist.obj$density[expected.counts==0] <- 0
 hist.obj$equidist <- FALSE
 
 plot(hist.obj, ylim = c(0, 1))
-points(f.gamma.function(0:max(covey.d$Distance), scale=calc_scale, shape=det.param[nrow(det.param) - 1, 2]), type = "l", col = "red")
+points(f.gamma.function(0:max(covey.d$Distance), scale=calc_scale, shape=shape), type = "l", col = "red")
 
