@@ -69,7 +69,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   # setting up the matrices that will contain the paramter values;
   
   # number of iterations
-  nt <- 100000 #fewer iterations for testing
+  nt <- 10000 #fewer iterations for testing
   
   df_size <- 100
   
@@ -103,8 +103,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   ############# proposal distributions
   # proposal distributions for detection function parameters:
   
-  msyt.prop.mean <- c(1, rep(0.5, 21))
-  msyt.prop.sd <- rep(0.5, 22)
+  msyt.prop.mean <- c(320, 4, rep(0.5, 16))
+  msyt.prop.sd <- c(10, rep(0.5, 17))
   
   
   # model identifier for detection function, model number in rows, parameters (y/n) in columns
@@ -138,7 +138,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   
   # set proposal mean and sd
   det.prop.mean <- c(320, 3.6, rnorm(16, 0, 1))
-  det.prop.sd <- c(1, 0.5, rep(0.1, 16))
+  det.prop.sd <- c(20, 0.5, rep(0.1, 16))
   count.prop.mean <- c(1, rnorm(6, 0, 1), 0)
   count.prop.sd <- c(1, rep(0.1, 6), 1)
   
@@ -162,18 +162,18 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   ### detection function parameters
   # for scale intercept
   l.prior.sig <- function(sigm) {
-    log.u.sig<-array(NA,length(sigm))
+    log.u.sig <- NULL
     for (k in 1:length(sigm)) {
-      log.u.sig[k] <- log(dunif(sigm[k], 250, 400))                                
+      log.u.sig[k] <- log(dunif(sigm[k], 300, 400))                                
     }
     return(sum(log.u.sig))
   }
   
   # for shape
-  l.prior.sha<-function(shap){
-    log.u.sha<-array(NA,length(shap))
+  l.prior.sha <- function(shap){
+    log.u.sha <- NULL
     for (k in 1:length(shap)){
-      log.u<-log(dunif(shap[k], 2, 5))
+      log.u<-log(dunif(shap[k], 3, 5))
       if (is.infinite(log.u)) {
         log.u.sha[k]<- -100000
       } else {
@@ -220,14 +220,16 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   calcFe <- function (x, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
     
     #calculate scale as a function of all parameters
-    scale_param <- sig1 * exp(sig.y[years == x[7]] + 
+    scale_param <- sig1 * exp(sig.y[years == x[8]] +
                                 sig.s[x[2]] +
-                                sig.ss[x[4]] + 
-                                sig.cc[x[5] + 1] +  
+                                sig.ss[x[4]] +
+                                sig.cc[x[5] + 1] +
                                 sig.wc[x[6]])
+
+    #fe <- log(f.gamma.function(x[3], scale_param, sha2))
+    fe <- f.gamma.function(x[3], scale_param, sha2)
     
-    fe <- log(f.gamma.function(x[3], scale=scale_param, shape=sha2))
-    
+
     return (fe)
     
   }
@@ -276,7 +278,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
     # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
     fe <- apply(cd, 1, calcFe, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss)
     
-    
     # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
     # for each visit 
     
@@ -285,7 +286,12 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
     l.pois.y <- pois_ll[2, ] 
     l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
     
-    post <- sum(fe) + sum(l.pois.y) + sum(l.b.norm)
+    post <- log(prod(fe)) + sum(l.pois.y) + sum(l.b.norm)
+    
+    if (is.infinite(post)) {
+      post <- -100000
+    }
+    
     return(post)
   }
   
@@ -313,21 +319,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
     return(v1^(shape-1)*exp(-v1)/(gamma(shape)*fr))
 
   }
-  
-  # #gamma pdf
-  # f.gamma.function <- function (distance, shape, scale) {
-  #   
-  #   if (shape > 150) {
-  #     stop(paste("Shape parameter of ", shape, "is outside the range of the gamma function"))
-  #   }
-  #   
-  #   num <- distance^(shape - 1) * exp(-distance/scale)
-  #   den <- scale^shape * gamma(shape)
-  #   
-  #   return(num/den)
-  #   
-  # }
-  
   
   f.gamma.function <- cmpfun(f.gamma.function)
   
@@ -444,7 +435,10 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
       }
       
       # for shape                  
-      mh.newsigs[2] <- mh.cursigs[2] + rnorm(1, 2, 0.2) #tweaked for gamma to stop the shape parameter becoming < 1
+      mh.newsigs[2] <- mh.cursigs[2] + rnorm(1, 0, 0.05) #tweaked for gamma to stop the shape parameter becoming < 1
+      while (mh.newsigs[2] <=1) {
+        mh.newsigs[2] <- mh.newsigs[2] + rnorm(1, 0, 0.05) 
+      }
       num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
       den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
       A <- min(1, exp(num-den))
