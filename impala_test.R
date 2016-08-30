@@ -50,7 +50,7 @@ dat <- list(y=
             nind=73,
             nz=300)
 
-init <- list(theta = 1, psi = 0.8, z = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+init <- list(theta = 1, psi = 0.2, z = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
                                          1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
                                          1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
                                          1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -80,7 +80,7 @@ nind <- 73 #73 individuals
 nz <- 300
 
 # number of iterations
-nt <- 20000
+nt <- 10000
 
 #initial parameters
 cur_theta <- init$theta
@@ -121,20 +121,16 @@ log.lik.fct <- function (p) {
   x <- runif(nind+nz, 0, 4)
   p     <- f.hn.function(x, theta)
   mu   <- z * p
-  y <- NULL
-  for (i in 1:length(mu)) {
-    y[i] <- rbinom(1, 1, p[i])
-  }
-  
+
   #detection function likelihood 
   #eqn 5.18 (pg 66) in Distance Sampling: Methods and Applications
   u <- integrate(f.hn.function, 0, 4, theta)$value
-  l.det <- prod(f.hn.function(dat$x[1:nind], theta)/u)
+  l.det <- log(prod(f.hn.function(dat$x[1:nind], theta)/u))
 
   #count likelihood 
-  #l.count <- log(dbinom(sum(dat$y), sum(z), mean(mu[mu != 0])))
+  l.count <- log(dbinom(sum(dat$y), sum(z), mean(mu[mu != 0])))
   
-  loglik <- sum(l.det)
+  loglik <- l.det + l.count
   if (is.nan(loglik) | is.infinite(loglik)) {
     loglik <- -100000
   }
@@ -210,7 +206,7 @@ for (i in 1:4) {
   plot(par[, i])
 }
 
-#par <- par[1000:nrow(par), ] #remove 1000 sample burn-in
+par <- par[1000:nrow(par), ] #remove 1000 sample burn-in
 
 summary_tab <- cbind(colMeans(par), apply(par, 2, sd))
 rownames(summary_tab) <- c("theta", "psi", "N", "D")
