@@ -90,7 +90,7 @@ b0 <- rnorm(j, 0, std.ran0)
 # setting up the matrices that will contain the paramter values;
 
 # number of iterations
-nt <- 100000 #fewer iterations for testing
+nt <- 10000 #fewer iterations for testing
 
 df_size <- 100
 
@@ -250,7 +250,9 @@ calcFe <- function (x, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
                               sig.cc[x[5] + 1] +  
                               sig.wc[x[6]])
   
-  fe <- log(f.gamma.function(x[3], scale_param, sha2))
+  #fe <- log(f.gamma.function(x[3], scale_param, sha2))
+  u <- integrate(f.gamma.function, 0, 1000, scale_param, sha2)$value
+  fe <- log(prod(f.gamma.function(x[3], scale_param, sha2)/u))
   
   return (fe)
   
