@@ -129,7 +129,7 @@ log.lik.fct <- function (p) {
   #detection function likelihood 
   #eqn 5.18 (pg 66) in Distance Sampling: Methods and Applications
   u <- integrate(f.hn.function, 0, 4, theta)$value
-  l.det <- prod(f.hn.function(x, theta)/u)
+  l.det <- prod(f.hn.function(dat$x[1:nind], theta)/u)
 
   #count likelihood 
   #l.count <- log(dbinom(sum(dat$y), sum(z), mean(mu[mu != 0])))
