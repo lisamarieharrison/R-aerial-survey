@@ -1,5 +1,4 @@
-#RJ-MCMC for aerial survey data to run in parallel
-#code modified from Cornelia Oedekoven
+#RJ-MCMC test on impala data from Royale
 #author: Lisa-Marie Harrison
 #date: 25/07/2016
 
@@ -119,23 +118,24 @@ log.lik.fct <- function (p) {
   psi   <- p[2] # psi
   
   z <- rbinom(nind+nz, 1, psi) # latent indicator variables from data augmentation
-  y <- NULL
-  x <- dat$x
-  x[(nind+1):length(x)] <- runif(nz, 0, 4)
-  p    <- f.hn.function(x, theta)
+  x <- runif(nind+nz, 0, 4)
+  p     <- f.hn.function(x, theta)
   mu   <- z * p
-  for (j in 1:length(mu)) {
-    y[j] <- rbinom(1, 1, mu[j])
+  y <- NULL
+  for (i in 1:length(mu)) {
+    y[i] <- rbinom(1, 1, p[i])
   }
   
   #detection function likelihood 
-  l.det <- log(f.hn.function(dat$x, theta))
-  
+  #eqn 5.18 (pg 66) in Distance Sampling: Methods and Applications
+  u <- integrate(f.hn.function, 0, 4, theta)$value
+  l.det <- prod(f.hn.function(x, theta)/u)
+
   #count likelihood 
-  l.count <- log(dbinom(sum(y), sum(z), mean(mu[mu != 0])))
+  #l.count <- log(dbinom(sum(dat$y), sum(z), mean(mu[mu != 0])))
   
-  loglik <- l.count + sum(l.det)
-  if (is.infinite(loglik)) {
+  loglik <- sum(l.det)
+  if (is.nan(loglik) | is.infinite(loglik)) {
     loglik <- -100000
   }
   
@@ -184,7 +184,7 @@ for (i in 2:nt) {
   num <- log.lik.fct(c(cur_theta, new_psi)) + l.prior.psi(new_psi)
   den <- log.lik.fct(c(cur_theta, cur_psi)) + l.prior.psi(cur_psi)
   A <- min(1, exp(num - den))
-  if (runif(1) <= A) {
+  if (runif(1) <= A & num != -1e5) {
     cur_psi <- new_psi #if accepted, update current parameters
   } 
   
