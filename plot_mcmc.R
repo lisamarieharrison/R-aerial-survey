@@ -3,6 +3,7 @@
 #date: 25/07/2016
 
 setwd("C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
+library(mcmcse)
 
 model1 <- read.csv("models1.csv", header = T)
 model2 <- read.csv("models2.csv", header = T)
@@ -119,9 +120,16 @@ calc_scale1 <- det.param[burn_in:nrow(det.param), 1] * exp(sum(colMeans(det.para
 
 calc_scale2 <- det.param2[burn_in:nrow(det.param2), 1] * exp(sum(colMeans(det.param2[burn_in:nrow(det.param2), 3:18])))
 
-scale_mean <- mean(c(calc_scale1, calc_scale2))
+scale <- mcse(c(calc_scale1, calc_scale2), size = "sqroot", g = NULL,
+              method = c("bm", "obm", "tukey", "bartlett"),
+              warn = FALSE)
 
-shape_mean <- mean(c(det.param[burn_in:nrow(det.param), 2], det.param2[burn_in:nrow(det.param2), 2]))
+shape <- mcse(c(det.param[burn_in:nrow(det.param), 2], det.param2[burn_in:nrow(det.param2), 2]), size = "sqroot", g = NULL,
+              method = c("bm", "obm", "tukey", "bartlett"),
+              warn = FALSE)
+
+scale_mean <- scale$est
+shape_mean <- shape$est
 
 nc <- length(hist.obj$mids)
 pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), scale=scale_mean, shape=shape_mean)$value/max(covey.d$Distance)
@@ -145,19 +153,18 @@ points(f.gamma.function(0:max(covey.d$Distance), scale=scale_mean, shape=shape_m
 
 #----------------------- PARAMETER ESTIMATES --------------------------#
 
-scale_sd <- sd(c(calc_scale1, calc_scale2))
-shape_sd <- sd(c(det.param[burn_in:nrow(det.param), 2], det.param2[burn_in:nrow(det.param2), 2]))
+scale_se <- scale$se
+shape_se <- shape$se
 
-scale_cv <- scale_sd/scale_mean
-shape_cv <- shape_sd/shape_mean
+scale_cv <- scale_se/scale_mean
+shape_cv <- shape_se/shape_mean
 
 #summary table
 
-sum_sats <- rbind(c(scale_mean, scale_sd, scale_cv), c(shape_mean, shape_sd, shape_cv))
+sum_sats <- rbind(c(shape_mean, shape_se, shape_cv), c(scale_mean, scale_se, scale_cv))
 colnames(sum_sats) <- c("Est", "SD", "CV")
-rownames(sum_sats) <- c("Scale", "Shape")
+rownames(sum_sats) <- c("Shape", "Scale")
 sum_sats <- round(sum_sats, 4)
 
 sum_sats
-
 
