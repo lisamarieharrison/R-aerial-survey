@@ -17,8 +17,8 @@ registerDoParallel(cl)
 
 #the ddf analysis found scale = 318 and shape = 3.6 for dolphins, and 197 and 303 for fish
 #to convert ddf parameters exponentiate both and then add 1 to shape
-foreach(chain = 1:n_chains, scale0 = c(250, 350), shape0 = c(2, 3), int0 = c(1, 2), species = rep("BOT", n_chains), truncate = rep(c(50, 500), n_chains)) %dopar% {
-  runRjmcmc(chain, scale0, shape0, int0, species, truncate)
+foreach(chain = 1:n_chains, scale0 = c(250, 350), shape0 = c(2, 3), int0 = c(1, 2), species = rep("BOT", n_chains), truncate_left = c(50, 50), truncate_right = c(500, 500)) %dopar% {
+  runRjmcmc(chain, scale0, shape0, int0, species, truncate_left, truncate_right)
 }
 
 stopCluster(cl)
