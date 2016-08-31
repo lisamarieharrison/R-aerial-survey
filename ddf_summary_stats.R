@@ -38,14 +38,9 @@ dat <- dat[!dat$Secondary == "Y", ]
 #check number of sightings = 2695
 #getting 2375 
 dim(dat[dat$Type == "S", ])
-
 dat$Count <- NA
 dat$Count[dat$Type == "S"] <- 1
-
 dat$Date <- chron(dates. = as.character(dat$Date), format = "d/m/y")
-
-#plot dolphin group size
-hist(dat$Number[dat$Species == "BOT"], main = "Bottlenose Dolphin Group Size", xlab = "Number of dolphins", col = "lightgrey")
 
 #combine all non-hammerhead sharks
 dat$Species[dat$Species %in% c("W", "Wh", "BS")] <- "S"
@@ -57,14 +52,14 @@ lisa_obs <- dat[dat$Observer == "Lisa" & dat$Flight.Direction == "S", ]
 #add a unique trial number to each day
 lisa_obs$Trial <- as.numeric(as.factor(as.character(lisa_obs$Date)))
 
-#Bottlenose dolphins
-total_observations <- createDistanceData(species = "BOT", lisa_obs, truncate = 1000, direction = "S")
-det_fun_BOT <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 1000))
-plot(det_fun_BOT, main = "Bottlenose Dolphins")
+#Fit detection function
+total_observations <- createDistanceData(species = "B", lisa_obs, truncate = 1000, direction = "S")
+det_fun <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 1000))
+plot(det_fun)
 
 
-est <- exp(det_fun_BOT$par) + c(1, 0)
-sd <- c(summary(det_fun_BOT)$coeff$key.shape[2]$se, summary(det_fun_BOT)$coeff$key.scale[2]$se)
+est <- exp(det_fun$par) + c(1, 0)
+sd <- c(summary(det_fun)$coeff$key.shape[2]$se, summary(det_fun)$coeff$key.scale[2]$se)
 cv <- sd/est
 
 #summary table
@@ -73,6 +68,9 @@ sum_sats <- cbind(est, sd, cv)
 colnames(sum_sats) <- c("Est", "SE", "CV")
 rownames(sum_sats) <- c("Shape", "Scale")
 sum_sats <- round(sum_sats, 4)
+if (det_fun$ds$aux$ddfobj$type == "hn") { #if half normal model, only scale parameter estimated
+  sum_sats <- sum_sats[2, ]
+}
 
 sum_sats
 
