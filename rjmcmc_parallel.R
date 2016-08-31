@@ -3,7 +3,7 @@
 #author: Lisa-Marie Harrison
 #date: 25/07/2016
 
-runRjmcmc <- function (chain, scale0, shape0, int0, species) {
+runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate) {
   
   library(compiler)
   library(tcltk)
@@ -25,7 +25,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
   covey.d$Id <- 1:nrow(covey.d)
   covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
   covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
-  covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Distance >= 50 & covey.d$Flight.Direction == "S" & covey.d$Sea_state < 4, ] #truncate to 1km
+  covey.d <- covey.d[covey.d$Distance <= truncate[2] & covey.d$Distance >= truncate[1] & covey.d$Flight.Direction == "S" & covey.d$Sea_state < 4, ] #truncate to 1km
   
   length.d <- length(covey.d$Distance)
   
@@ -270,7 +270,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
     
     # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
     fe <- apply(cd, 1, calcFe, sig.y, sig.s, sig.cc, sig.wc, sha2, sig1, sig.ss)
-    u <- integrate(f.gamma.function, 50, 1000, sig1, sha2)$value/950    
+    u <- integrate(f.gamma.function, truncate[1], truncate[2], sig1, sha2)$value/(diff(truncate))    
     
     # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
     # for each visit 
