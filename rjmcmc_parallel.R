@@ -247,7 +247,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
     return(c(lambda, l.pois.y))
     
   }
-  
+  poissonLik <- cmpfun(poissonLik)
   
   
   ########################## the posterior conditional distribution functions ######################
@@ -424,9 +424,9 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
       mh.cursigs <- rj.cursigs
       
       # for scale intercept
-      mh.newsigs[1] <- mh.cursigs[1] + rnorm(1, 0, 1) 
+      mh.newsigs[1] <- mh.cursigs[1] + rnorm(1, 0, 2) 
       while (mh.newsigs[1] <=0) {    # prevents scale intercept to become < 0
-        mh.newsigs[1] <- mh.cursigs[1] + rnorm(1, 0, 1)
+        mh.newsigs[1] <- mh.cursigs[1] + rnorm(1, 0, 2)
       }
       num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
       den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
@@ -441,7 +441,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
       # for shape                  
       mh.newsigs[2] <- mh.cursigs[2] + rnorm(1, 0, 0.05) #tweaked for gamma to stop the shape parameter becoming < 1
       while (mh.newsigs[2] <=1) {
-        mh.newsigs[2] <- mh.newsigs[2] + rnorm(1, 0, 0.05) 
+        mh.newsigs[2] <- mh.newsigs[2] + rnorm(1, 0, 0.01) 
       }
       num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
       den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
