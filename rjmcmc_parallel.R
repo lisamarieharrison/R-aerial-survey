@@ -131,7 +131,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   count.list[4, ] <- c(1, rep(0, 6), 1)             # null model
   
   ################## picking the first model for detection function
-  det.model[2] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
+  #det.model[2] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
+  det.model[2] <- 8  # randomly choose a model to start with
   cur.dmod <- det.model[2]
   # holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
   rj.cursigs <- det.param[2, ]
@@ -164,7 +165,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   l.prior.sig <- function(sigm) {
     log.u.sig <- NULL
     for (k in 1:length(sigm)) {
-      log.u.sig[k] <- log(dunif(sigm[k], 300, 400))                                
+      log.u.sig[k] <- log(dunif(sigm[k], 200, 400))                                
     }
     return(sum(log.u.sig))
   }
@@ -217,7 +218,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   
   
   #function to calculate likelihood for detection function for each observation
-  calcFe <- function (x, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss) {
+  calcFe <- function (x, sig.y, sig.s, sig.cc, sig.wc, sha2, sig1, sig.ss) {
     
     #calculate scale as a function of all parameters
     scale_param <- sig1 * exp(sig.y[years == x[8]] +
@@ -276,7 +277,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
     
     
     # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
-    fe <- apply(cd, 1, calcFe, sig.y, sig.s, sig.cc, sig.wc, sha2, efa, sig1, sig.ss)
+    fe <- apply(cd, 1, calcFe, sig.y, sig.s, sig.cc, sig.wc, sha2, sig1, sig.ss)
+    u <- integrate(f.gamma.function, 0, 1000, sig1, sha2)$value/1000    
     
     # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
     # for each visit 
@@ -286,7 +288,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
     l.pois.y <- pois_ll[2, ] 
     l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
     
-    post <- log(prod(fe)) + sum(l.pois.y) + sum(l.b.norm)
+    post <- log(prod(fe/u)) + sum(l.pois.y) + sum(l.b.norm)
     
     if (is.infinite(post)) {
       post <- -100000
@@ -348,32 +350,33 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
       cur.dmod <- det.model[index - 1]
       curpa <- det.list[cur.dmod, ]
       
-      new_model <- sample(x = (1:nrow(det.list))[-cur.dmod], size = 1) #current model can't be chosen again
+      #new_model <- sample(x = (1:nrow(det.list))[-cur.dmod], size = 1) #current model can't be chosen again
+      new_model <- 8 #current model can't be chosen again
       newpa <- det.list[new_model, ]
       rj.newsigs <- rj.cursigs
       
-      
-      #fill in indeces for parameters that were not in the old model but are in the new one
-      added_indeces <- curpa - newpa == -1
-      rj.newsigs[added_indeces] <- rnorm(sum(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
-      
-      #remove parameters that are in the old model but are not in the new one
-      removed_indeces <- newpa - curpa == -1
-      rj.newsigs[removed_indeces] <- 0
-      
-      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
-      
-      #check whether the new model is accepted
-      A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
-      if (runif(1) <= A) {                           # if move is accepted change current values to new values
-        rj.cursigs <- rj.newsigs               
-        cur.dmod <- new_model #change to new model if accepted
-        
-      } else {                             
-        rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
-      }
-      
+      # 
+      # #fill in indeces for parameters that were not in the old model but are in the new one
+      # added_indeces <- curpa - newpa == -1
+      # rj.newsigs[added_indeces] <- rnorm(sum(added_indeces), det.prop.mean[added_indeces], det.prop.sd[added_indeces])
+      # 
+      # #remove parameters that are in the old model but are not in the new one
+      # removed_indeces <- newpa - curpa == -1
+      # rj.newsigs[removed_indeces] <- 0
+      # 
+      # num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
+      # den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
+      # 
+      # #check whether the new model is accepted
+      # A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
+      # if (runif(1) <= A) {                           # if move is accepted change current values to new values
+      #   rj.cursigs <- rj.newsigs               
+      #   cur.dmod <- new_model #change to new model if accepted
+      #   
+      # } else {                             
+      #   rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
+      # }
+      # 
       
       # record the model selection for the det fct in det.model for the i'th iteration
       det.model[index] <- cur.dmod
@@ -421,17 +424,18 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
       mh.cursigs <- rj.cursigs
       
       # for scale intercept
-      u <- rnorm(1, 0, 3.5) 
-      if ((mh.cursigs[1] + u) > 1) {    
-        mh.newsigs[1] <- mh.cursigs[1] + u   # prevents scale intercept to become < 0
-        num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
-        den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
-        A <- min(1, exp(num-den))
-        if (runif(1) <= A) {
-          mh.cursigs <- mh.newsigs
-        } else {
-          mh.newsigs <- mh.cursigs
-        } 
+      mh.newsigs[1] <- mh.cursigs[1] + rnorm(1, 0, 1) 
+      while (mh.newsigs[1] <=0) {    # prevents scale intercept to become < 0
+        mh.newsigs[1] <- mh.cursigs[1] + rnorm(1, 0, 1)
+      }
+      num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
+      den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
+      A <- min(1, exp(num-den))
+      if (runif(1) <= A) {
+        mh.cursigs <- mh.newsigs
+      } else {
+        mh.newsigs <- mh.cursigs
+        
       }
       
       # for shape                  
