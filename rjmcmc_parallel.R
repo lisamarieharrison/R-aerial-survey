@@ -25,7 +25,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
   covey.d$Id <- 1:nrow(covey.d)
   covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
   covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
-  covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Flight.Direction == "S", ] #truncate to 1km
+  covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Flight.Direction == "S" & covey.d$Sea_state < 4, ] #truncate to 1km
   
   length.d <- length(covey.d$Distance)
   
@@ -156,7 +156,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
   l.prior.sig <- function(sigm) {
     log.u.sig <- NULL
     for (k in 1:length(sigm)) {
-      log.u.sig[k] <- log(dunif(sigm[k], 100, 500))                                
+      log.u.sig[k] <- log(dunif(sigm[k], 50, 500))                                
     }
     return(sum(log.u.sig))
   }
