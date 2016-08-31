@@ -25,7 +25,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
   covey.d$Id <- 1:nrow(covey.d)
   covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
   covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
-  covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Flight.Direction == "S" & covey.d$Sea_state < 4, ] #truncate to 1km
+  covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Distance >= 50 & covey.d$Flight.Direction == "S" & covey.d$Sea_state < 4, ] #truncate to 1km
   
   length.d <- length(covey.d$Distance)
   
@@ -69,7 +69,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
   # setting up the matrices that will contain the paramter values;
   
   # number of iterations
-  nt <- 100000 
+  nt <- 20000 
   
   df_size <- 100
   
@@ -124,7 +124,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
   count.list[4, ] <- c(1, rep(0, 6), 1)             # null model
   
   ################## picking the first model for detection function
-  det.model[2] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
+  #det.model[2] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
+  det.model[2] <- 8   # randomly choose a model to start with
   cur.dmod <- det.model[2]
   # holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
   rj.cursigs <- det.param[2, ]
@@ -156,7 +157,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
   l.prior.sig <- function(sigm) {
     log.u.sig <- NULL
     for (k in 1:length(sigm)) {
-      log.u.sig[k] <- log(dunif(sigm[k], 50, 500))                                
+      log.u.sig[k] <- log(dunif(sigm[k], 150, 500))                                
     }
     return(sum(log.u.sig))
   }
@@ -269,7 +270,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
     
     # 3. calculate the f_e for each detection for det model likelihood component L_y(\bmath{\theta}) (eqn (3): exact distance data) (LN: eqn. 2.3)
     fe <- apply(cd, 1, calcFe, sig.y, sig.s, sig.cc, sig.wc, sha2, sig1, sig.ss)
-    u <- integrate(f.gamma.function, 0, 1000, sig1, sha2)$value/1000    
+    u <- integrate(f.gamma.function, 50, 1000, sig1, sha2)$value/950    
     
     # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
     # for each visit 
@@ -279,7 +280,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
     l.pois.y <- pois_ll[2, ] 
     l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
     
-    post <- log(prod(fe/u)) + sum(l.pois.y) + sum(l.b.norm)
+    post <- log(prod(fe/u)/2) + sum(l.pois.y) + sum(l.b.norm)
     
     if (is.infinite(post)) {
       post <- -100000
@@ -354,21 +355,21 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species) {
       #remove parameters that are in the old model but are not in the new one
       removed_indeces <- newpa - curpa == -1
       rj.newsigs[removed_indeces] <- 0
-
-      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
-
-      #check whether the new model is accepted
-      A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
-      if (runif(1) <= A) {                           # if move is accepted change current values to new values
-        rj.cursigs <- rj.newsigs
-        cur.dmod <- new_model #change to new model if accepted
-
-      } else {
-        rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
-      }
-
-      
+# 
+#       num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
+#       den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
+# 
+#       #check whether the new model is accepted
+#       A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
+#       if (runif(1) <= A) {                           # if move is accepted change current values to new values
+#         rj.cursigs <- rj.newsigs
+#         cur.dmod <- new_model #change to new model if accepted
+# 
+#       } else {
+#         rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
+#       }
+# 
+#       
       # record the model selection for the det fct in det.model for the i'th iteration
       det.model[index] <- cur.dmod
       
