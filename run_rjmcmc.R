@@ -17,7 +17,7 @@ registerDoParallel(cl)
 
 #the ddf analysis found scale = 318 and shape = 3.6
 #to convert ddf parameters exponentiate both and then add 1 to shape
-foreach(chain=1:n_chains, scale0=c(300, 350), shape0=c(3, 4), int0 = c(1, 2)) %dopar% {
+foreach(chain=1:n_chains, scale0=c(250, 350), shape0=c(2, 5), int0 = c(1, 2)) %dopar% {
   runRjmcmc(chain, scale0, shape0, int0)
 }
 
