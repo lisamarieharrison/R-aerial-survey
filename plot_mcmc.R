@@ -107,16 +107,16 @@ det.param <- as.matrix(na.omit(det_param1))
 hist.obj <- hist(covey.d$Distance, plot = FALSE)
 
 #calculate scale averaged across all parameter levels
-calc_scale <- det.param[nrow(det.param) - 1, 1] * exp(mean(c(0, det.param[, 3:4])) +
-                                                        mean(c(0, det.param[, 5:6])) +
-                                                        mean(c(0, det.param[, 7:8])) +
-                                                        mean(c(0, det.param[, 9:16])) +
-                                                        mean(c(0, det.param[, 17:18])))
+calc_scale <- mean(det.param[1000:nrow(det.param), 1]) * exp(mean(c(0, det.param[1000:nrow(det.param), 3:4])) +
+                                                        mean(c(0, det.param[1000:nrow(det.param), 5:6])) +
+                                                        mean(c(0, det.param[1000:nrow(det.param), 7:8])) +
+                                                        mean(c(0, det.param[1000:nrow(det.param), 9:16])) +
+                                                        mean(c(0, det.param[1000:nrow(det.param), 17:18])))
 
-shape <- det.param[nrow(det.param) - 1, 2]
+shape <- mean(det.param[1000:nrow(det.param), 2])
 
 nc <- length(hist.obj$mids)
-pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), scale=calc_scale, shape=det.param[nrow(det.param) - 1, 2])$value/max(covey.d$Distance)
+pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), scale=calc_scale, shape=shape)$value/max(covey.d$Distance)
 Nhat <- nrow(covey.d)/pa
 breaks <- hist.obj$breaks
 expected.counts <- (breaks[2:(nc+1)]-breaks[1:nc])*(Nhat/breaks[nc+1])
@@ -132,6 +132,6 @@ hist.obj$density <- hist.obj$counts/expected.counts
 hist.obj$density[expected.counts==0] <- 0
 hist.obj$equidist <- FALSE
 
-plot(hist.obj, ylim = c(0, 1))
+plot(hist.obj, ylim = c(0, 1.5))
 points(f.gamma.function(0:max(covey.d$Distance), scale=calc_scale, shape=shape), type = "l", col = "red")
 
