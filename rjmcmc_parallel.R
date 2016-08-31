@@ -69,7 +69,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   # setting up the matrices that will contain the paramter values;
   
   # number of iterations
-  nt <- 10000 #fewer iterations for testing
+  nt <- 100000 
   
   df_size <- 100
   
@@ -174,7 +174,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0) {
   l.prior.sha <- function(shap){
     log.u.sha <- NULL
     for (k in 1:length(shap)){
-      log.u<-log(dunif(shap[k], 3, 5))
+      log.u<-log(dunif(shap[k], 1, 6))
       if (is.infinite(log.u)) {
         log.u.sha[k]<- -100000
       } else {
