@@ -38,6 +38,12 @@ table(det_models[, 1], det_models[, 2])
 count_models <- cbind(c(model1[1:100000, 2], model2[1:100000, 2]), rep(1:2, each = 100000))
 table(count_models[, 1], count_models[, 2])
 
+#choose burn in 
+burn_in <- 1000
+
+
+
+
 #---------------- CHECK PARAMETER CONVERGENCE ---------------------#
 
 gelman.rubin <- function(param) {
@@ -64,13 +70,14 @@ gelman.rubin <- function(param) {
 }
 
 #parameter considered converged if Gelman-Rubin statistic is < 1.1
-gelman.rubin(cbind(det_param1[1:10000, 1], det_param2[1:10000, 1]))
+gelman.rubin(cbind(det_param1[1:burn_in, 1], det_param2[1:burn_in, 1]))
 
 
-#--------------------- CHECK DETECTION FUNCTION FIT ------------------#
+#--------------------- CHECK DETECTION FUNCTION FIT -----------------------#
 
 #plot detection function over histogram of distances
 #distances scaled by expected count
+#remove burn in and average over all other parameter values (doesn't take model choice into account)
 
 
 
@@ -103,35 +110,54 @@ f.gamma.function <- function (distance, scale, shape) {
 }
 
 det.param <- as.matrix(na.omit(det_param1))
+det.param2 <- as.matrix(na.omit(det_param2))
 
 hist.obj <- hist(covey.d$Distance, plot = FALSE)
 
 #calculate scale averaged across all parameter levels
-calc_scale <- mean(det.param[1000:nrow(det.param), 1]) * exp(mean(c(0, det.param[1000:nrow(det.param), 3:4])) +
-                                                        mean(c(0, det.param[1000:nrow(det.param), 5:6])) +
-                                                        mean(c(0, det.param[1000:nrow(det.param), 7:8])) +
-                                                        mean(c(0, det.param[1000:nrow(det.param), 9:16])) +
-                                                        mean(c(0, det.param[1000:nrow(det.param), 17:18])))
+calc_scale1 <- det.param[burn_in:nrow(det.param), 1] * exp(sum(colMeans(det.param[burn_in:nrow(det.param), 3:18])))
 
-shape <- mean(det.param[1000:nrow(det.param), 2])
+calc_scale2 <- det.param2[burn_in:nrow(det.param2), 1] * exp(sum(colMeans(det.param2[burn_in:nrow(det.param2), 3:18])))
+
+scale_mean <- mean(c(calc_scale1, calc_scale2))
+
+shape_mean <- mean(c(det.param[burn_in:nrow(det.param), 2], det.param2[burn_in:nrow(det.param2), 2]))
 
 nc <- length(hist.obj$mids)
-pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), scale=calc_scale, shape=shape)$value/max(covey.d$Distance)
+pa <- integrate(f.gamma.function, 0, max(covey.d$Distance), scale=scale_mean, shape=shape_mean)$value/max(covey.d$Distance)
 Nhat <- nrow(covey.d)/pa
 breaks <- hist.obj$breaks
 expected.counts <- (breaks[2:(nc+1)]-breaks[1:nc])*(Nhat/breaks[nc+1])
 
 
 nc <- length(breaks)-1
-pdot <- f.gamma.function(covey.d$Distance, scale=calc_scale, shape=shape)
+pdot <- f.gamma.function(covey.d$Distance, scale=scale_mean, shape=shape_mean)
 Nhat <- sum(1/pdot)
-
 
 
 hist.obj$density <- hist.obj$counts/expected.counts
 hist.obj$density[expected.counts==0] <- 0
 hist.obj$equidist <- FALSE
 
-plot(hist.obj, ylim = c(0, 1.5))
-points(f.gamma.function(0:max(covey.d$Distance), scale=calc_scale, shape=shape), type = "l", col = "red")
+plot(hist.obj, ylim = c(0, 1))
+points(f.gamma.function(0:max(covey.d$Distance), scale=scale_mean, shape=shape_mean), type = "l", col = "red")
+
+
+#----------------------- PARAMETER ESTIMATES --------------------------#
+
+scale_sd <- sd(c(calc_scale1, calc_scale2))
+shape_sd <- sd(c(det.param[burn_in:nrow(det.param), 2], det.param2[burn_in:nrow(det.param2), 2]))
+
+scale_cv <- scale_sd/scale_mean
+shape_cv <- shape_sd/shape_mean
+
+#summary table
+
+sum_sats <- rbind(c(scale_mean, scale_sd, scale_cv), c(shape_mean, shape_sd, shape_cv))
+colnames(sum_sats) <- c("Est", "SD", "CV")
+rownames(sum_sats) <- c("Scale", "Shape")
+sum_sats <- round(sum_sats, 4)
+
+sum_sats
+
 
