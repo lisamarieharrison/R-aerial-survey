@@ -87,7 +87,8 @@ if (Sys.info()[4] == "SCI-6246") {
   source_location <- "~/Lisa/phd/Mixed models/R code/R-functions-southern-ocean/"
 } else {
   setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/data")
-  source_location <- "~/phd/southern ocean/Mixed models/R code/R-functions-southern-ocean/"
+  source_location <- "~/phd/southern ocean/Mixed models/R code/R-functions-s
+  outhern-ocean/"
 }
 
 dat <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
@@ -113,7 +114,7 @@ f.gamma.function <- function (distance, scale, shape) {
 det.param <- as.matrix(na.omit(det_param1))
 det.param2 <- as.matrix(na.omit(det_param2))
 
-hist.obj <- hist(covey.d$Distance, plot = FALSE)
+hist.obj <- hist(covey.d$Distance, plot = FALSE, breaks = 32)
 
 #calculate scale averaged across all parameter levels
 calc_scale1 <- det.param[burn_in:nrow(det.param), 1] * exp(sum(colMeans(det.param[burn_in:nrow(det.param), 3:18])))
@@ -147,8 +148,8 @@ hist.obj$density <- hist.obj$counts/expected.counts
 hist.obj$density[expected.counts==0] <- 0
 hist.obj$equidist <- FALSE
 
-plot(hist.obj, ylim = c(0, 1))
-points(f.gamma.function(0:max(covey.d$Distance), scale=scale_mean, shape=shape_mean), type = "l", col = "red")
+plot(hist.obj, ylim = c(0, 1.3), xlim = c(0, 1000))
+points(f.gamma.function(0:1000, scale=scale_mean, shape=shape_mean), type = "l", col = "red")
 
 
 #----------------------- PARAMETER ESTIMATES --------------------------#
@@ -160,11 +161,22 @@ scale_cv <- scale_se/scale_mean
 shape_cv <- shape_se/shape_mean
 
 #summary table
-
 sum_sats <- rbind(c(shape_mean, shape_se, shape_cv), c(scale_mean, scale_se, scale_cv))
 colnames(sum_sats) <- c("Est", "SD", "CV")
 rownames(sum_sats) <- c("Shape", "Scale")
 sum_sats <- round(sum_sats, 4)
 
 sum_sats
+
+
+#average p
+average.p <- integrate(f.gamma.function, 0, 1000, scale_mean, shape_mean)$value/1000
+average.p
+
+#calculate abundance
+#currently doesn't support other coefficients
+lambda_mean <- exp(mean(c(count_param1[, 1], count_param2[, 1])))
+count_est_per_transect <- rpois(1, lambda_mean)
+
+count_est_per_transect/average.p
 
