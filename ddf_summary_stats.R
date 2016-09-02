@@ -28,10 +28,6 @@ for (f in file_list) {
   
 }
 
-
-#remove duplicated observations
-#dat <- dat[!duplicated(dat), ]
-
 #remove secondary observations
 dat <- dat[!dat$Secondary == "Y", ]
 
@@ -54,9 +50,8 @@ lisa_obs$Trial <- as.numeric(as.factor(as.character(lisa_obs$Date)))
 
 #Fit detection function
 total_observations <- createDistanceData(species = "B", lisa_obs, truncate = 1000, direction = "S")
-det_fun <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 1000))
+det_fun <- ddf(method = 'ds',dsmodel =~ mcds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 0, width = 1000))
 plot(det_fun)
-
 
 est <- exp(det_fun$par) + c(1, 0)
 sd <- c(summary(det_fun)$coeff$key.shape[2]$se, summary(det_fun)$coeff$key.scale[2]$se)
@@ -73,4 +68,15 @@ if (det_fun$ds$aux$ddfobj$type == "hn") { #if half normal model, only scale para
 }
 
 sum_sats
+
+#average p
+summary(det_fun)$average.p
+
+
+#calculate abundance
+calcAbundanceAndCV(det_fun, line_length = 265, n_surveys = length(unique(total_observations$Trial)))
+
+a <- dht(det_fun, region.table = data.frame("Region.Label" = 1, "Area" = 265000), sample.table = data.frame("Region.Label" = 1, "Sample.Label" = 1:46, "Effort" = 265),
+      obs.table = data.frame("object" = 1:nrow(total_observations), "Region.Label" = 1, "Sample.Label" = total_observations$Trial))
+
 
