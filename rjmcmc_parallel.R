@@ -124,8 +124,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
   count.list[4, ] <- c(1, rep(0, 6), 1)             # null model
   
   ################## picking the first model for detection function
-  #det.model[2] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
-  det.model[2] <- 8   # randomly choose a model to start with
+  det.model[2] <- sample(1:nrow(det.list), size = 1)   # randomly choose a model to start with
   cur.dmod <- det.model[2]
   # holds the current det function parameters (vector \bmath{\theta}^t_m for model m)
   rj.cursigs <- det.param[2, ]
@@ -136,6 +135,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
   count.prop.mean <- c(1, rnorm(6, 0, 1), 0)
   count.prop.sd <- c(1, rep(0.1, 6), 1)
   
+  nz <- 200
   
   ################## picking the first model for density model
   
@@ -229,15 +229,15 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
   
   #function to calculate the poisson likelihood of counts for each visit
   poissonLik <- function (x, int, b, yea, sea) {
-    
+
     count_i <- counts[x["Visit"]] #count for visit i
-    
+
     lambda <- exp(int + yea[years == x["Year"]] + sea[x["Season"]] + b[x["Visit"]])
-    
-    l.pois.y <- log(dpois(count_i, lambda))    # Poisson log-likelihood for each observation n_jpr in Y
-    
+
+    l.pois.y <- dpois(count_i, lambda)    # Poisson log-likelihood for each observation n_jpr in Y
+
     return(c(lambda, l.pois.y))
-    
+
   }
   poissonLik <- cmpfun(poissonLik)
   
@@ -262,8 +262,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
     
     std.ran <- p[26]           # density: random effect standard deviation
     b <- p[27:length(p)]       # density: random effect coefficients
-    
-    #------------------------------------------------------------------------------
+
+        #------------------------------------------------------------------------------
     # LN: Reasoning for 1 & 2 found in paragraph following eqn. 2.5
     #------------------------------------------------------------------------------
     
@@ -275,12 +275,24 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
     # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
     # for each visit 
     
+    # z <- rbinom(nz, 1, int) # latent indicator variables from data augmentation
+    # x <- runif(nz, 0, 1000)
+    # p     <- f.gamma.function(x, sig1, sha2)
+    # mu   <- z * p
+    # 
+    # #count likelihood 
+    # count <- NULL
+    # for (j in 1:length(counts)) {
+    #   count[j] <- dbinom(counts[j], sum(z), mean(mu[mu != 0]))
+    # }
+
+
     pois_ll <- apply(visit_tab, 1, poissonLik, int, b, yea, sea)
     lambda <- pois_ll[1, ]
-    l.pois.y <- pois_ll[2, ] 
+    l.pois.y <- pois_ll[2, ]
     l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
     
-    post <- log(prod(fe/u)) + sum(l.pois.y) + sum(l.b.norm)
+    post <- log(prod((fe/u)/3)) + log(prod(l.pois.y)) + sum(l.b.norm)
     
     if (is.infinite(post)) {
       post <- -100000
@@ -355,21 +367,21 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
       #remove parameters that are in the old model but are not in the new one
       removed_indeces <- newpa - curpa == -1
       rj.newsigs[removed_indeces] <- 0
-# 
-#       num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
-#       den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
-# 
-#       #check whether the new model is accepted
-#       A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
-#       if (runif(1) <= A) {                           # if move is accepted change current values to new values
-#         rj.cursigs <- rj.newsigs
-#         cur.dmod <- new_model #change to new model if accepted
-# 
-#       } else {
-#         rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
-#       }
-# 
-#       
+
+      num <- log.lik.fct(c(rj.newsigs, rj.curparam)) + l.prior(rj.newsigs[added_indeces], -1, 1) + sum(log(dnorm(rj.cursigs[removed_indeces], msyt.prop.mean[removed_indeces], msyt.prop.sd[removed_indeces])))  # the numerator of eqn (11)    (LN: Pretty sure this is A.4)
+      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newsigs[added_indeces], msyt.prop.mean[added_indeces], msyt.prop.sd[added_indeces]))) + l.prior(rj.cursigs[removed_indeces], -1, 1) # the denominator of eqn (11)
+
+      #check whether the new model is accepted
+      A <- min(1, exp(num - den))                   # proposed move is accepted with probability A
+      if (runif(1) <= A) {                           # if move is accepted change current values to new values
+        rj.cursigs <- rj.newsigs
+        cur.dmod <- new_model #change to new model if accepted
+
+      } else {
+        rj.newsigs <- rj.cursigs               # if move is rejected, reset everything to current
+      }
+
+
       # record the model selection for the det fct in det.model for the i'th iteration
       det.model[index] <- cur.dmod
       
@@ -394,8 +406,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
       removed_indeces <- which(new.par - cur.par == -1)
       rj.newparam[removed_indeces] <- 0
       
-      num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[added_indeces], -1, 1) + sum(log(dnorm(rj.newparam[removed_indeces], count.prop.mean[removed_indeces], count.prop.sd[removed_indeces])))
-      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[added_indeces], count.prop.mean[added_indeces], count.prop.sd[added_indeces]))) + l.prior(rj.newparam[removed_indeces], -1, 1)
+      num <- log.lik.fct(c(rj.cursigs, rj.newparam)) + l.prior(rj.newparam[added_indeces], -2, 2) + sum(log(dnorm(rj.newparam[removed_indeces], count.prop.mean[removed_indeces], count.prop.sd[removed_indeces])))
+      den <- log.lik.fct(c(rj.cursigs, rj.curparam)) + sum(log(dnorm(rj.newparam[added_indeces], count.prop.mean[added_indeces], count.prop.sd[added_indeces]))) + l.prior(rj.newparam[removed_indeces], -2, 2)
       
       #check if the new model is accepted
       A <- min(1, exp(num - den))
@@ -477,9 +489,12 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
       newparam <- rj.curparam
       
       # the intercept
-      newparam[1] <- curparam[1] + rnorm(1, 0, 0.08) 
-      num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -1, 1) #changed newparam to c(rj.cursigs, newparam)
-      den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -1, 1) #changed curparam to c(rj.cursigs, curparam)
+      newparam[1] <- curparam[1] + rnorm(1, 0, 0.05) 
+      # while (newparam[1] <=0 | newparam[1] >= 1) {
+      #   newparam[1] <- curparam[1] + rnorm(1, 0, 0.05) 
+      # }
+      num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -2, 2)
+      den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -2, 2) 
       A <- min(1, exp(num - den))
       if (runif(1) <= A) {
         curparam[1] <- newparam[1]
@@ -487,27 +502,28 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
         newparam[1] <- curparam[1]
       }
       
-      # loop through each parameter
-      indeces <- which(curparam[2:8] != 0) + 1
-      den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
-      for (m in indeces) {
+      
+     # loop through each parameter
+      # indeces <- which(curparam[2:8] != 0) + 1
+      # den_ll <- log.lik.fct(c(rj.cursigs, curparam)) 
+      # for (m in indeces) {
+      #   
+      #   u <- rnorm(1, 0, 0.25)
+      #   newparam[m] <- curparam[m] + u
+      #   num_ll <- log.lik.fct(c(rj.cursigs, newparam))
+      #   num <- num_ll + l.prior(newparam[m], -1, 1)
+      #   den <- den_ll + l.prior(curparam[m], -1, 1)
+      #   A <- min(1, exp(num - den))
+      #   V <- runif(1)
+      #   if (V <= A) {
+      #     curparam[m] <- newparam[m]
+      #     den_ll <- num_ll
+      #   } else {
+      #     newparam[m] <- curparam[m]
+      #   }
         
-        u <- rnorm(1, 0, 0.25)
-        newparam[m] <- curparam[m] + u
-        num_ll <- log.lik.fct(c(rj.cursigs, newparam))
-        num <- num_ll + l.prior(newparam[m], -1, 1)
-        den <- den_ll + l.prior(curparam[m], -1, 1)
-        A <- min(1, exp(num - den))
-        V <- runif(1)
-        if (V <= A) {
-          curparam[m] <- newparam[m]
-          den_ll <- num_ll
-        } else {
-          newparam[m] <- curparam[m]
-        }
         
-        
-      }
+      # }
       
       
       # the visit random effect standard deviation
