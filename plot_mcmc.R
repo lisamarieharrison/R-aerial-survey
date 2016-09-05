@@ -35,8 +35,9 @@ plot(count_param1[, 1], type= "l", main = "Count model - intercept", xlab = "ite
 points(count_param2[, 1], type = "l", col = "red")
 
 #abundance estimate
-plot(N1$V1, type = "l", ylim = c(0, 60))
+plot(N1$V1, type = "l", ylim = c(0, 150))
 points(N2$V1, type = "l", col = "red")
+
 
 #detection model choice
 det_models <- cbind(c(model1[1:100000, 1], model2[1:100000, 1]), rep(1:2, each = 100000))
@@ -90,13 +91,14 @@ gelman.rubin(cbind(det_param1[1:burn_in, 1], det_param2[1:burn_in, 1]))
 
 
 if (Sys.info()[4] == "SCI-6246") {
-  setwd(dir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/data")
-  source_location <- "~/Lisa/phd/Mixed models/R code/R-functions-southern-ocean/"
+  setwd(dir = "~/Lisa/phd/aerial survey/data")
+  source_location <- "~/Lisa/phd/aerial survey/R/R-aerial-survey/functions/"
 } else {
-  setwd(dir = "C:/Users/Lisa/Documents/phd/aerial survey/data")
-  source_location <- "~/phd/southern ocean/Mixed models/R code/R-functions-s
-  outhern-ocean/"
+  setwd(dir = "~/phd/aerial survey/data")
+  source_location <- "~/Documents/phd/aerial survey/R/R-aerial-survey/functions/"
 }
+
+source(paste0(source_location, "gamma_det_fun.R"))
 
 dat <- read.csv("aerial_survey_summary_r.csv", header = T) #lisa's sighting data
 dat$Year <- as.numeric(substr(as.character(dat$Date), nchar(as.character(dat$Date)) - 3, nchar(as.character(dat$Date))))
@@ -109,16 +111,7 @@ covey.d$Visit <- as.numeric(as.factor(covey.d$Date)) #visit is transect
 covey.d <- covey.d[covey.d$Distance != 0, ] #remove 0 distances because they are errors
 covey.d <- covey.d[covey.d$Distance <= 1000 & covey.d$Flight.Direction == "S", ] #truncate to 1km
 
-
-f.gamma.function <- function (distance, scale, shape) {
-  
-  fr <- (1/gamma(shape)) * (((shape - 1)/exp(1))^(shape - 1))
-  v1 <- distance/(scale * fr)
-  return(v1^(shape-1)*exp(-v1)/(gamma(shape)*fr))
-  
-}
-
-det.param <- as.matrix(na.omit(det_param1))
+det.param  <- as.matrix(na.omit(det_param1))
 det.param2 <- as.matrix(na.omit(det_param2))
 
 hist.obj <- hist(covey.d$Distance, plot = FALSE, breaks = 15)
