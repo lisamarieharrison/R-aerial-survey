@@ -439,7 +439,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
       num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sig(mh.newsigs[1]) # the numerator of eqn (8)   (LN: This is is A.1)
       den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sig(mh.cursigs[1]) # the denominator of eqn (8)
       A <- min(1, exp(num-den))
-      if (runif(1) <= A) {
+      if (runif(1) <= A & num != -1e5) {
         mh.cursigs <- mh.newsigs
       } else {
         mh.newsigs <- mh.cursigs
@@ -454,7 +454,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
       num <- log.lik.fct(c(mh.newsigs, rj.curparam)) + l.prior.sha(mh.newsigs[2])
       den <- log.lik.fct(c(mh.cursigs, rj.curparam)) + l.prior.sha(mh.cursigs[2])
       A <- min(1, exp(num-den))
-      if (runif(1) <= A) {
+      if (runif(1) <= A & num != -1e5) {
         mh.cursigs <- mh.newsigs
       } else {
         mh.newsigs <- mh.cursigs
