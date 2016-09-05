@@ -282,10 +282,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, 
 
     #count likelihood
     count <- dbinom(round(mean(counts)), sum(z), mean(mu[mu != 0]))
-    if (sum(z) > 50) {
-      warning(c(sum(z), mean(mu[mu != 0])))
-    }
-  
 
 
     # pois_ll <- apply(visit_tab, 1, poissonLik, int, b, yea, sea)
