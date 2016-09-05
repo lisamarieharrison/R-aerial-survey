@@ -3,7 +3,7 @@
 #author: Lisa-Marie Harrison
 #date: 25/07/2016
 
-runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, truncate_right) {
+runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, truncate_right) {
   
   library(compiler)
   library(tcltk)
@@ -63,9 +63,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
   
   # the random effect coefficients b_j
   b0 <- rnorm(j, 0, std.ran0)
-  
-  
-  nz <- 100
   
   #########################################################################
   # setting up the matrices that will contain the paramter values;
