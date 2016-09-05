@@ -47,6 +47,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, 
   years          <- sort(unique(covey.d$Year))
   seasons        <- levels(covey.d$Season)
 
+  j <- length(counts)
+  
   ########################################  set initial values ##############
   
   #  count model parameters: intercept and random effect standard deviation for L_n(\bmath{\beta}|\bmath{\theta}) (eqn (6))
