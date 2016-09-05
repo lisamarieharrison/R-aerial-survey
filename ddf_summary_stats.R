@@ -50,8 +50,8 @@ lisa_obs <- dat[dat$Observer == "Lisa" & dat$Flight.Direction == "S", ]
 lisa_obs$Trial <- as.numeric(as.factor(as.character(lisa_obs$Date)))
 
 #Fit detection function
-total_observations <- createDistanceData(species = "B", lisa_obs, truncate = 1000, direction = "S")
-det_fun <- ddf(method = 'ds',dsmodel =~ mcds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 0, width = 1000))
+total_observations <- createDistanceData(species = "BOT", lisa_obs, truncate = 1000, direction = "S")
+det_fun <- ddf(method = 'ds',dsmodel =~ mcds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 50, width = 1000))
 plot(det_fun)
 
 est <- exp(det_fun$par) + c(1, 0)
@@ -83,5 +83,5 @@ a <- dht(det_fun, region.table = data.frame("Region.Label" = 1, "Area" = 265000)
 
 #add gamma detection function from mcmc
 
-points(f.gamma.function(0:1000, scale=326.077, shape=3.5458), type = "l", col = "red", lwd = 2)
+points(f.gamma.function(0:1000, scale=193.2, shape=3.8), type = "l", col = "red", lwd = 2)
 legend("topright", c("freq", "mcmc"), col = c("black", "red"), lwd = 2, bty = "n")
