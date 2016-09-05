@@ -14,6 +14,8 @@ det_param2 <- read.csv("det.param2.csv", header = T)
 count_param1 <- read.csv("count.param1.csv", header = T)
 count_param2 <- read.csv("count.param2.csv", header = T)
 
+N1 <- read.csv("N1.csv", header = F)
+N2 <- read.csv("N2.csv", header = F)
 
 #detection model scale (depends on other covariates too)
 det_param1 <- na.omit(det_param1)
@@ -27,9 +29,14 @@ plot(det_param1[, 2], type = "l", main = "Gamma detection function - shape", xla
 points(det_param2[, 2], type = "l", col = "red")
 
 #count model intercept
-plot(count_param1[, 1], type= "l", main = "Poisson count model - intercept", xlab = "iteration", ylab = "intercept", ylim = c(0, 5))
+count_param1 <- na.omit(count_param1)
+count_param2 <- na.omit(count_param2)
+plot(count_param1[, 1], type= "l", main = "Count model - intercept", xlab = "iteration", ylab = "intercept", ylim = c(min(count_param1[, 1], count_param2[, 1]), max(count_param1[, 1], count_param2[, 1])))
 points(count_param2[, 1], type = "l", col = "red")
 
+#abundance estimate
+plot(N1$V1, type = "l", ylim = c(0, 60))
+points(N2$V1, type = "l", col = "red")
 
 #detection model choice
 det_models <- cbind(c(model1[1:100000, 1], model2[1:100000, 1]), rep(1:2, each = 100000))
@@ -114,7 +121,7 @@ f.gamma.function <- function (distance, scale, shape) {
 det.param <- as.matrix(na.omit(det_param1))
 det.param2 <- as.matrix(na.omit(det_param2))
 
-hist.obj <- hist(covey.d$Distance, plot = FALSE, breaks = 32)
+hist.obj <- hist(covey.d$Distance, plot = FALSE, breaks = 15)
 
 #calculate scale averaged across all parameter levels
 calc_scale1 <- det.param[burn_in:nrow(det.param), 1] * exp(sum(colMeans(det.param[burn_in:nrow(det.param), 3:18])))
@@ -148,8 +155,8 @@ hist.obj$density <- hist.obj$counts/expected.counts
 hist.obj$density[expected.counts==0] <- 0
 hist.obj$equidist <- FALSE
 
-plot(hist.obj, ylim = c(0, 1.3), xlim = c(0, 1000))
-points(f.gamma.function(0:1000, scale=scale_mean, shape=shape_mean), type = "l", col = "red")
+plot(hist.obj, ylim = c(0, 1.3), xlim = c(0, 1000), col = "lightgrey", xlab = "Distance (m)")
+points(f.gamma.function(0:1000, scale=scale_mean, shape=shape_mean), type = "l", col = "red", lwd = 2)
 
 
 #----------------------- PARAMETER ESTIMATES --------------------------#
@@ -175,8 +182,15 @@ average.p
 
 #calculate abundance
 #currently doesn't support other coefficients
-lambda_mean <- exp(mean(c(count_param1[, 1], count_param2[, 1])))
-count_est_per_transect <- rpois(1, lambda_mean)
 
-count_est_per_transect/average.p
+#data augmentation
+
+Ns <- na.omit(c(N1[burn_in:nrow(N1), ], N2[burn_in:nrow(N2), ]))
+
+n_hat <- mean(Ns)
+n_sd <- sd(Ns)/sqrt(length(Ns))
+n_cv <- n_sd/n_hat
+
+paste0("N = ", round(n_hat, 3), " (CV = ", round(n_cv, 3), ")")
+
 
