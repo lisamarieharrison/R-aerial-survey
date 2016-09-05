@@ -17,6 +17,8 @@ count_param2 <- read.csv("count.param2.csv", header = T)
 N1 <- read.csv("N1.csv", header = F)
 N2 <- read.csv("N2.csv", header = F)
 
+nrow(model1) #which iteration are we up to
+
 #detection model scale (depends on other covariates too)
 det_param1 <- na.omit(det_param1)
 det_param2 <- na.omit(det_param2)
@@ -174,7 +176,9 @@ average.p <- integrate(f.gamma.function, 0, 1000, scale_mean, shape_mean)$value/
 average.p
 
 #calculate abundance
-#currently doesn't support other coefficients
+
+psi_mean <- mean(c(count_param1[, 1], count_param2[, 1]))
+
 
 #data augmentation
 
@@ -184,6 +188,6 @@ n_hat <- mean(Ns)
 n_sd <- sd(Ns)/sqrt(length(Ns))
 n_cv <- n_sd/n_hat
 
-paste0("N = ", round(n_hat, 3), " (CV = ", round(n_cv, 3), ")")
+paste0("N = ", round(n_hat, 3), " (CV = ", round(n_cv, 3), ") with psi = ", round(psi_mean, 2))
 
 
