@@ -4,16 +4,14 @@ lik <- function(x) {
   
   z <- rbinom(nz, 1, x) # latent indicator variables from data augmentation
   dist <- runif(nz, 0, 1000)
-  p     <- f.gamma.function(dist, sig1, sha2)
+  p     <- f.gamma.function(dist, scale0, shape0)
   mu   <- z * p
   
   #count likelihood 
-  count <- NULL
-  for (j in 1:length(counts)) {
-    count[j] <- dbinom(counts[j], sum(z), mean(mu[mu != 0]))
-  }
+  count<- dbinom(round(mean(counts)), sum(z), mean(mu[mu != 0]))
+
   
-  return(log(prod(count)))
+  return(log(count))
   
 }
 
