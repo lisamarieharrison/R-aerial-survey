@@ -213,7 +213,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, 
                                 sig.cc[x[5] + 1] +
                                 sig.wc[x[6]])
 
-    #fe <- log(f.gamma.function(x[3], scale_param, sha2))
     fe <- f.gamma.function(x[3], scale_param, sha2)
     
 
@@ -269,7 +268,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, 
     # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
     # for each visit 
     z <- rbinom(nz, 1, int) # latent indicator variables from data augmentation
-    x <- runif(nz, 0, 1000)
+    x <- runif(nz, truncate_left, truncate_right)
     p     <- f.gamma.function(x, sig1, sha2)
     mu   <- z * p
 
