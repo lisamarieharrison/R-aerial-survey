@@ -46,16 +46,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, 
   
   years          <- sort(unique(covey.d$Year))
   seasons        <- levels(covey.d$Season)
-  sea_states     <- sort(unique(covey.d$Sea_state))
-  cloud_covers   <- sort(unique(covey.d$Cloud_cover))
-  water_claritys <- sort(unique(covey.d$Water_clarity))
-  visits         <- sort(unique(covey.d$Visit))
-  
-  j  <- max(visits)  #visit 31 had no counts
-  Y  <- table(covey.d$Visit) #count per visit
-  
-  line_length <- 26500 #m
-  
+
   ########################################  set initial values ##############
   
   #  count model parameters: intercept and random effect standard deviation for L_n(\bmath{\beta}|\bmath{\theta}) (eqn (6))
