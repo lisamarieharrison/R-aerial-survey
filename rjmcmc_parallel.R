@@ -139,7 +139,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, 
   
   ################## picking the first model for density model
   
-  count.model[2] <- sample(1:nrow(count.list), size = 1)   # randomly choose a model to start with
+  #count.model[2] <- sample(1:nrow(count.list), size = 1)   # randomly choose a model to start with
+  count.model[2] <- 4
   cur.mod <- count.model[2]
   # holds the parameter values for the current density model (vector \bmath{\beta}^t for model m)
   rj.curparam <- count.param[2, ]
@@ -394,7 +395,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, nz, truncate_left, 
       cur.mod <- count.model[index - 1]
       
       #choose a new model
-      new_model <- sample(x = (1:nrow(count.list))[-cur.mod], size = 1) #current model can't be chosen again
+      #new_model <- sample(x = (1:nrow(count.list))[-cur.mod], size = 1) #current model can't be chosen again
+      new_model <- 4
       cur.par <- count.list[cur.mod, ]
       new.par <- count.list[new_model, ]
       
