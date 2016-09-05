@@ -65,6 +65,8 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
   b0 <- rnorm(j, 0, std.ran0)
   
   
+  nz <- 100
+  
   #########################################################################
   # setting up the matrices that will contain the paramter values;
   
@@ -86,6 +88,9 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
   
   # the matrix that will keep the parameter values for the density model
   count.param <- matrix(NA, df_size + 1, 8 + j)
+  
+  #matrix to hold abundance estimates
+  N <- matrix(NA, df_size + 1, 1)
   
   # filling in the initial values
   count.param[2, ] <- c(int0, rep(0, 6), std.ran0, b0)
@@ -134,8 +139,6 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
   det.prop.sd <- c(20, 0.5, rep(0.1, 16))
   count.prop.mean <- c(1, rnorm(6, 0, 1), 0)
   count.prop.sd <- c(1, rep(0.1, 6), 1)
-  
-  nz <- 200
   
   ################## picking the first model for density model
   
@@ -274,25 +277,26 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
     
     # 5. model L_n(\bmath{\beta}|\bmath{\theta}) from eqn (7)  (LN: eqn. 2.8)
     # for each visit 
-    
-    # z <- rbinom(nz, 1, int) # latent indicator variables from data augmentation
-    # x <- runif(nz, 0, 1000)
-    # p     <- f.gamma.function(x, sig1, sha2)
-    # mu   <- z * p
-    # 
-    # #count likelihood 
-    # count <- NULL
-    # for (j in 1:length(counts)) {
-    #   count[j] <- dbinom(counts[j], sum(z), mean(mu[mu != 0]))
-    # }
+    z <- rbinom(nz, 1, int) # latent indicator variables from data augmentation
+    x <- runif(nz, 0, 1000)
+    p     <- f.gamma.function(x, sig1, sha2)
+    mu   <- z * p
+
+    #count likelihood
+    count <- dbinom(round(mean(counts)), sum(z), mean(mu[mu != 0]))
+    if (sum(z) > 50) {
+      warning(c(sum(z), mean(mu[mu != 0])))
+    }
+  
 
 
-    pois_ll <- apply(visit_tab, 1, poissonLik, int, b, yea, sea)
-    lambda <- pois_ll[1, ]
-    l.pois.y <- pois_ll[2, ]
+    # pois_ll <- apply(visit_tab, 1, poissonLik, int, b, yea, sea)
+    # lambda <- pois_ll[1, ]
+    # l.pois.y <- pois_ll[2, ]
     l.b.norm <- log(dnorm(b, 0, std.ran))  # log of normal density for b_j
     
-    post <- log(prod((fe/u)/3)) + log(prod(l.pois.y)) + sum(l.b.norm)
+    #post <- log(prod((fe/u)/3)) + log(prod(l.pois.y)) + sum(l.b.norm)
+    post <- log(prod((fe/u)/3)) + log(count) + sum(l.b.norm)
     
     if (is.infinite(post)) {
       post <- -100000
@@ -489,14 +493,14 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
       newparam <- rj.curparam
       
       # the intercept
-      newparam[1] <- curparam[1] + rnorm(1, 0, 0.05) 
-      # while (newparam[1] <=0 | newparam[1] >= 1) {
-      #   newparam[1] <- curparam[1] + rnorm(1, 0, 0.05) 
-      # }
-      num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], -2, 2)
-      den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], -2, 2) 
+      newparam[1] <- curparam[1] + rnorm(1, 0, 0.01) 
+      while (newparam[1] <=0 | newparam[1] >= 1) {
+        newparam[1] <- curparam[1] + rnorm(1, 0, 0.01)
+      }
+      num <- log.lik.fct(c(rj.cursigs, newparam)) + l.prior(newparam[1], 0, 1)
+      den <- log.lik.fct(c(rj.cursigs, curparam)) + l.prior(curparam[1], 0, 1) 
       A <- min(1, exp(num - den))
-      if (runif(1) <= A) {
+      if (runif(1) <= A & num != -1e5) {
         curparam[1] <- newparam[1]
       } else {
         newparam[1] <- curparam[1]
@@ -553,12 +557,16 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
         }
       }
       
+      #population estimate from data augmentation
+      z <- rbinom(nz, 1, curparam[1]) # latent indicator variables from data augmentation
+      N[index] <- sum(z)
       
       # saving the new parameter values of the density model in count.param
       count.param[index, ] <- curparam
       
       rj.curparam <- curparam
       rj.newparam <- curparam
+      
       
       # saving the parameter matrices ever 1000 iterations
       if ((i + 1) %% df_size == 0) {
@@ -570,6 +578,7 @@ runRjmcmc <- function (chain, scale0, shape0, int0, species, truncate_left, trun
         write.table(cbind(det.model, count.model), paste0("models", chain ,".csv"), append = TRUE, row.names = F, col.names = F, sep = ",")
         write.table(det.param, paste0("det.param", chain, ".csv"), append = TRUE, row.names = F, col.names = F, sep = ",")
         write.table(count.param, paste0("count.param", chain, ".csv"), append = TRUE, row.names = F, col.names = F, sep = ",")
+        write.table(N, paste0("N", chain, ".csv"), append = TRUE, row.names = F, col.names = F, sep = ",")
         
         det.model[1] <- det.model[index]
         count.model[1] <- count.model[index]
