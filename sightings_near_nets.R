@@ -101,6 +101,7 @@ sighting_to_net  <- distAllCombinations(dat_bot$Lat, nets$latitude, nets$longitu
 
 marked_points <- data.frame("longitude" = dat_bot$Long, "latitude" = dat_bot$Lat, "mark" = "dolphin", "seg" = dat_bot$Transect)
 marked_points <- rbind(marked_points, data.frame("longitude" = dat_fish$Long, "latitude" = dat_fish$Lat, "mark" = "fish", "seg" = dat_fish$Transect))
+marked_points <- na.omit(marked_points)
 #marked_points <- rbind(marked_points, data.frame("longitude" = nets$longitude, "latitude" = nets$latitude, "mark" = "net"), seg)
 #marked_points <- rbind(marked_points, data.frame("longitude" = no_nets$longitude, "latitude" = no_nets$latitude, "mark" = "no_net"))
 
@@ -122,7 +123,7 @@ marked_points$tp <- (marked_points$latitude - min(marked_points$latitude))/(max(
 owin <- owin(xrange = c(mean(marked_points$longitude), mean(marked_points$longitude)+500), yrange = c(min(marked_points$latitude), max(marked_points$latitude)))
 transect_bounds <- ppp(x = rep(mean(marked_points$longitude), 47*2), y = rep(c(min(marked_points$latitude), max(marked_points$latitude)), 47), window = owin)
 jointed_vertices <- matrix(FALSE, nrow = 94, ncol = 94)
-pairs <- cbind(seq(1, 94, by = 2), seq(2, 94, by = 2))
+pairs <- cbind(seq(1, 93), seq(2, 94))
 jointed_vertices[rbind(pairs, cbind(pairs[, 2], pairs[, 1]))] <- TRUE
 
 
