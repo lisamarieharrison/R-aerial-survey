@@ -15,11 +15,8 @@ if (Sys.info()[4] == "SCI-6246") {
 library(chron)
 library(mrds)
 library(dsm)
-library(raster)
-library(maps)
-library(mapdata)
-library(maptools)
 library(sp)
+library(rgeos) #gLength
 
 dat <- read.csv("aerial_survey_summary_r.csv", header = T)
 
@@ -27,7 +24,7 @@ source_list <- c("functions/createDistanceData.R",
                "functions/gamma_det_fun.R")
 
 invisible(Map(source, paste0(source_location, source_list)))
-
+source("C:/Users/43439535/Documents/Lisa/phd/Mixed models/R code/R-functions-southern-ocean/grid_plot_obj.R")
 
 #remove secondary observations
 dat <- dat[!dat$Secondary == "Y", ]
@@ -53,65 +50,76 @@ total_observations <- createDistanceData(species = "BOT", lisa_obs, truncate = 1
 det_fun <- ddf(method = 'ds',dsmodel =~ mcds(key = "gamma", formula=~1), data = total_observations, meta.data = list(left = 0, width = 1000))
 plot(det_fun)
 
-obs_data <- data.frame("object" = total_observations$object, "Sample.Label" = total_observations$Trial, "size" = total_observations$size, 
-                       "distance" = total_observations$distance, "Transect.Label" = total_observations$Trial)
+#transform observation coordinates to northings
+total_observations_latlon <- SpatialPoints(apply(total_observations[, c("long", "lat")], 2, as.numeric), proj4string = CRS("+proj=longlat +datum=WGS84"))
+total_observations_utm <- spTransform(total_observations_latlon, CRS("+proj=utm +zone=53 ellps=WGS84"))
+  
+total_observations$E <- coordinates(total_observations_utm)[, 1]
+total_observations$N <- coordinates(total_observations_utm)[, 2]
 
-seg_data <- data.frame("Effort", "Sample.Label", "Transect.Label" = sort(unique(total_observations$Trial)))
+total_observations$N[total_observations$N > 0] <- -1*total_observations$N[total_observations$N > 0]
 
-
-#map of coastline
-
-
-lat_bound <- c(-34.6, -32.6)
-long_bound <- c(150.8, 152)
-
-aust  <- map("world2Hires", regions="Australia", fill = TRUE, col = "grey", xlim = long_bound, ylim = lat_bound, plot = FALSE)
-aust_poly <- map2SpatialPolygons(aust, IDs = aust$names, proj4string=CRS("+proj=longlat +datum=WGS84"))
-
-syd_poly <- crop(aust_poly, extent(c(long_bound, lat_bound)))
-syd_poly_utm <- spTransform(syd_poly, CRS("+proj=utm +zone=53 ellps=WGS84"))
+# ------------------------------ CREATE DATA FRAMES FOR DSM ------------------------------------- #
 
 
-#make empty raster
-grid <- raster(extent(syd_poly_utm))
-
-# Choose its res
-res(grid) <- 10000
-
-gridpolygon <- rasterToPolygons(grid)
-
-
+#read cruise track
 track <- readGPX("C:/Users/43439535/Documents/Lisa/phd/aerial survey/data/gps data/tracks/cruise_track.gpx")
-
 track_coords <- track$tracks[[2]]$`ACTIVE LOG`
 
+#make spatial Lines object
 track_line <- SpatialLines(list(Lines(list(Line(cbind(track_coords$lon, track_coords$lat))), ID = 1)), proj4string = CRS("+proj=longlat +datum=WGS84"))
 
-plot(track_line)
-
+#transform to utm
 track_utm <- spTransform(track_line, CRS("+proj=utm +zone=53 ellps=WGS84"))
 
+#find total length of track
+track_length <- gLength(track_utm)
 
-track_wide <- buffer(track_utm, 1000)
+#break track into regularly sized segments
+segment_size <- 4000 #m
+track_segmented <- spsample(track_utm, track_length/segment_size, type = "regular")
 
-track_segments <- rasterize(track_wide, grid)
-  
+#find segment mid points
+mid_points <- coordinates(track_segmented)
+transects <- sort(unique(total_observations$Trial))
+
+#create segdata for dsm
+seg_data <- data.frame("Effort" = segment_size, "Seg.Label" = rep(1:nrow(mid_points), length(transects)), "Transect.Label" = rep(transects, each = nrow(mid_points)),
+                       "X" = mid_points[, 1], "Y" = mid_points[, 2])
+
+#find which segment each observation is closest to
+total_observations$segment <- NA
+total_observations$dist_to_seg <- NA #distance to closest segment for error checking
+for (i in 1:nrow(total_observations)) {
+  dists <- abs(total_observations$E[i] - mid_points[, 1]) + abs(total_observations$N[i] - mid_points[, 2])
+  total_observations$segment[i] <-  which.min(dists)
+  total_observations$dist_to_seg[i] <- min(dists)
+}
+
+#create obsdata for dsm
+obs_data <- data.frame("object" = total_observations$object, "Seg.Label" = total_observations$segment, "size" = total_observations$size, 
+                       "distance" = total_observations$distance, "Transect.Label" = total_observations$Trial)
+
+obs_data$Sample.Label <- paste0(obs_data$Transect.Label, "-", obs_data$Seg.Label)
+seg_data$Sample.Label <- paste0(seg_data$Transect.Label, "-", seg_data$Seg.Label)
+
+#sample labels need to be unique
 
 
-true_grid <- intersect(gridpolygon, track_wide)
+bot_dsm <- dsm(count ~ s(X, Y), ddf.obj = det_fun, segment.data = seg_data, observation.data = obs_data)
 
-plot(true_grid)
-
-
-track_length <- diff(extent(track_segmented)[3:4])
-
-grid_size <- 4000 #m
-
-track_segmented <- spsample(track_utm, track_length/grid_size, type = "regular")
-
-plot(track_segmented)
+summary(bot_dsm)
+plot(bot_dsm)
 
 
+#predict count
+pred_dat <- data.frame(mid_points)
+colnames(pred_dat) <- c("X", "Y")
+pred_num <- predict(bot_dsm, newdata = pred_dat, off.set = segment_size*1000)
 
 
+qplot(pred_dat[, 1], pred_dat[, 2], colour = pred_num, size = 4)
+
+#total estimate of groups
+sum(pred_num)
 
