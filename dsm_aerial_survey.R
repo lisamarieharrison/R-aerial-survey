@@ -53,10 +53,8 @@ plot(det_fun)
 #transform observation coordinates to northings
 total_observations_latlon <- SpatialPoints(apply(total_observations[, c("long", "lat")], 2, as.numeric), proj4string = CRS("+proj=longlat +datum=WGS84"))
 total_observations_utm <- spTransform(total_observations_latlon, CRS("+proj=utm +zone=53 ellps=WGS84"))
-  
 total_observations$E <- coordinates(total_observations_utm)[, 1]
 total_observations$N <- coordinates(total_observations_utm)[, 2]
-
 total_observations$N[total_observations$N > 0] <- -1*total_observations$N[total_observations$N > 0]
 
 # ------------------------------ CREATE DATA FRAMES FOR DSM ------------------------------------- #
@@ -87,6 +85,29 @@ transects <- sort(unique(total_observations$Trial))
 seg_data <- data.frame("Effort" = segment_size, "Seg.Label" = rep(1:nrow(mid_points), length(transects)), "Transect.Label" = rep(transects, each = nrow(mid_points)),
                        "X" = mid_points[, 1], "Y" = mid_points[, 2])
 
+
+#add baitfish to correct segments
+seg_data$fish <- 0
+
+fish_observations <- createDistanceData(species = "B", lisa_obs, truncate = 1000, direction = "S")
+fish_observations$segment <- NA
+fish_observations_latlon <- SpatialPoints(apply(fish_observations[, c("long", "lat")], 2, as.numeric), proj4string = CRS("+proj=longlat +datum=WGS84"))
+fish_observations_utm <- spTransform(fish_observations_latlon, CRS("+proj=utm +zone=53 ellps=WGS84"))
+fish_observations$E <- coordinates(fish_observations_utm)[, 1]
+fish_observations$N <- coordinates(fish_observations_utm)[, 2]
+fish_observations$N[fish_observations$N > 0] <- -1*fish_observations$N[fish_observations$N > 0]
+
+for (obs in 1:nrow(fish_observations)) {
+  
+  dists <- abs(fish_observations$E[obs] - mid_points[, 1]) + abs(fish_observations$N[obs] - mid_points[, 2])
+  fish_observations$segment[obs] <-  which.min(dists)
+  
+}
+
+fish_observations$Sample.Label <- paste0(fish_observations$Trial, "-", fish_observations$segment)
+seg_data$fish[na.omit(match(names(table(fish_observations$Sample.Label)), seg_data$Sample.Label))] <- table(fish_observations$Sample.Label)[!is.na(match(names(table(fish_observations$Sample.Label)), seg_data$Sample.Label))]
+
+
 #find which segment each observation is closest to
 total_observations$segment <- NA
 total_observations$dist_to_seg <- NA #distance to closest segment for error checking
@@ -103,10 +124,9 @@ obs_data <- data.frame("object" = total_observations$object, "Seg.Label" = total
 obs_data$Sample.Label <- paste0(obs_data$Transect.Label, "-", obs_data$Seg.Label)
 seg_data$Sample.Label <- paste0(seg_data$Transect.Label, "-", seg_data$Seg.Label)
 
-#sample labels need to be unique
 
 
-bot_dsm <- dsm(count ~ s(X, Y), ddf.obj = det_fun, segment.data = seg_data, observation.data = obs_data)
+bot_dsm <- dsm(count ~ s(X, Y) + s(fish), ddf.obj = det_fun, segment.data = seg_data, observation.data = obs_data)
 
 summary(bot_dsm)
 plot(bot_dsm)
@@ -118,7 +138,7 @@ colnames(pred_dat) <- c("X", "Y")
 pred_num <- predict(bot_dsm, newdata = pred_dat, off.set = segment_size*1000)
 
 
-qplot(pred_dat[, 1], pred_dat[, 2], colour = pred_num, size = 4)
+qplot(pred_dat[, 1], pred_dat[, 2], colour = pred_num, size = 4, xlab = "Easting", ylab = "Northing")
 
 #total estimate of groups
 sum(pred_num)
