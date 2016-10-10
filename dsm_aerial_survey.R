@@ -19,17 +19,15 @@ library(raster)
 library(maps)
 library(mapdata)
 library(maptools)
+library(sp)
 
 dat <- read.csv("aerial_survey_summary_r.csv", header = T)
 
-file_list <- c("functions/createDistanceData.R",
-               "gamma_det_fun.R")
+source_list <- c("functions/createDistanceData.R",
+               "functions/gamma_det_fun.R")
 
-for (f in file_list) {
-  
-  source(paste0(source_location, f))
-  
-}
+invisible(Map(source, paste0(source_location, source_list)))
+
 
 #remove secondary observations
 dat <- dat[!dat$Secondary == "Y", ]
@@ -71,12 +69,49 @@ aust  <- map("world2Hires", regions="Australia", fill = TRUE, col = "grey", xlim
 aust_poly <- map2SpatialPolygons(aust, IDs = aust$names, proj4string=CRS("+proj=longlat +datum=WGS84"))
 
 syd_poly <- crop(aust_poly, extent(c(long_bound, lat_bound)))
+syd_poly_utm <- spTransform(syd_poly, CRS("+proj=utm +zone=53 ellps=WGS84"))
+
 
 #make empty raster
-grid <- raster(extent(aust_poly))
+grid <- raster(extent(syd_poly_utm))
 
-# Choose its res (m)
-res(grid) <- 1
+# Choose its res
+res(grid) <- 10000
 
-plot(grid)
+gridpolygon <- rasterToPolygons(grid)
+
+
+track <- readGPX("C:/Users/43439535/Documents/Lisa/phd/aerial survey/data/gps data/tracks/cruise_track.gpx")
+
+track_coords <- track$tracks[[2]]$`ACTIVE LOG`
+
+track_line <- SpatialLines(list(Lines(list(Line(cbind(track_coords$lon, track_coords$lat))), ID = 1)), proj4string = CRS("+proj=longlat +datum=WGS84"))
+
+plot(track_line)
+
+track_utm <- spTransform(track_line, CRS("+proj=utm +zone=53 ellps=WGS84"))
+
+
+track_wide <- buffer(track_utm, 1000)
+
+track_segments <- rasterize(track_wide, grid)
+  
+
+
+true_grid <- intersect(gridpolygon, track_wide)
+
+plot(true_grid)
+
+
+track_length <- diff(extent(track_segmented)[3:4])
+
+grid_size <- 4000 #m
+
+track_segmented <- spsample(track_utm, track_length/grid_size, type = "regular")
+
+plot(track_segmented)
+
+
+
+
 
