@@ -133,8 +133,9 @@ plot(bot_dsm)
 
 
 #predict count
-pred_dat <- data.frame(mid_points)
-colnames(pred_dat) <- c("X", "Y")
+#uses mean number of fish schools per segment
+pred_dat <- data.frame(cbind(mid_points, aggregate(seg_data$fish, list(seg_data$Seg.Label), mean)$x))
+colnames(pred_dat) <- c("X", "Y", "fish")
 pred_num <- predict(bot_dsm, newdata = pred_dat, off.set = segment_size*1000)
 
 
