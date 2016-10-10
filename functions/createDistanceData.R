@@ -24,6 +24,9 @@ createDistanceData <- function(species, lisa_obs, direction, truncate=NULL) {
   total_observations <- apply(total_observations, 2, as.character)
   total_observations <- data.frame(apply(total_observations, 2, as.numeric))
   
+  total_observations$lat  <- lisa_obs$Lat
+  total_observations$long <- lisa_obs$Long
+  
   if (species == "BOT") {
     total_observations <- total_observations[!is.na(total_observations$size), ]
   } else {
