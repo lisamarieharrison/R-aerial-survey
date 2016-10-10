@@ -84,6 +84,7 @@ transects <- sort(unique(total_observations$Trial))
 #create segdata for dsm
 seg_data <- data.frame("Effort" = segment_size, "Seg.Label" = rep(1:nrow(mid_points), length(transects)), "Transect.Label" = rep(transects, each = nrow(mid_points)),
                        "X" = mid_points[, 1], "Y" = mid_points[, 2])
+seg_data$Sample.Label <- paste0(seg_data$Transect.Label, "-", seg_data$Seg.Label)
 
 
 #add baitfish to correct segments
@@ -122,11 +123,12 @@ obs_data <- data.frame("object" = total_observations$object, "Seg.Label" = total
                        "distance" = total_observations$distance, "Transect.Label" = total_observations$Trial)
 
 obs_data$Sample.Label <- paste0(obs_data$Transect.Label, "-", obs_data$Seg.Label)
-seg_data$Sample.Label <- paste0(seg_data$Transect.Label, "-", seg_data$Seg.Label)
 
+seg_data$fish_pa <- 0
+seg_data$fish_pa[seg_data$fish > 0] <- 1
+seg_data$fish_pa <- as.factor(seg_data$fish_pa)
 
-
-bot_dsm <- dsm(count ~ s(X, Y) + s(fish), ddf.obj = det_fun, segment.data = seg_data, observation.data = obs_data)
+bot_dsm <- dsm(count ~ s(X, Y) + fish_pa, ddf.obj = det_fun, segment.data = seg_data, observation.data = obs_data)
 
 summary(bot_dsm)
 plot(bot_dsm)
@@ -134,8 +136,8 @@ plot(bot_dsm)
 
 #predict count
 #uses mean number of fish schools per segment
-pred_dat <- data.frame(cbind(mid_points, aggregate(seg_data$fish, list(seg_data$Seg.Label), mean)$x))
-colnames(pred_dat) <- c("X", "Y", "fish")
+pred_dat <- data.frame(cbind(mid_points, aggregate(seg_data$fish, list(seg_data$Seg.Label), mean)$x), round(aggregate(as.numeric(seg_data$fish_pa) - 1, list(seg_data$Seg.Label), mean)$x))
+colnames(pred_dat) <- c("X", "Y", "fish", "fish_pa")
 pred_num <- predict(bot_dsm, newdata = pred_dat, off.set = segment_size*1000)
 
 
