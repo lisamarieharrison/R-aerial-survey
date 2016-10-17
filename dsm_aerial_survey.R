@@ -17,6 +17,7 @@ library(mrds)
 library(dsm)
 library(sp)
 library(rgeos) #gLength
+library(plotKML) #readGPX
 
 dat <- read.csv("aerial_survey_summary_r.csv", header = T)
 
@@ -128,7 +129,7 @@ seg_data$fish_pa <- 0
 seg_data$fish_pa[seg_data$fish > 0] <- 1
 seg_data$fish_pa <- as.factor(seg_data$fish_pa)
 
-bot_dsm <- dsm(count ~ s(X, Y) + fish_pa, ddf.obj = det_fun, segment.data = seg_data, observation.data = obs_data)
+bot_dsm <- dsm(count ~ s(X, Y) + s(fish, k = 5), ddf.obj = det_fun, segment.data = seg_data, observation.data = obs_data, family = poisson(link="log"))
 
 summary(bot_dsm)
 plot(bot_dsm)
