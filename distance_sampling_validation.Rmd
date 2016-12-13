@@ -1,0 +1,167 @@
+---
+title: "Distance sampling simulation"
+author: "Lisa-Marie Harrison"
+date: "December 13, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+
+During southbound transects, the observer is looking offshore. During northbound transects the observer is looking onshore.
+
+
+```{r distance sampling, fig.width = 12, fig.height = 7}
+
+#test distance sampling assumptions using both directions
+#author: Lisa-Marie Harrison
+#date: 13/12/2016
+
+if (Sys.info()[4] == "SCI-6246") {
+  wdir = "C:/Users/43439535/Documents/Lisa/phd/aerial survey/R"
+} else {
+  wdir = "C:/Users/Lisa/Documents/phd/aerial survey/R"
+}
+
+
+lisa_obs <- read.csv(paste0(wdir, "/data/lisa_full_observations.csv"), header = T)
+library(mrds)
+library(chron)
+library(knitr)
+library(spatstat)
+library(sp)
+
+#add a unique trial number to each day
+date_levels <- as.numeric(as.factor(c(as.character(lisa_obs$Date))))
+lisa_obs$Trial <- date_levels[1:nrow(lisa_obs)]
+
+lisa_obs$Year <- substr(lisa_obs$Date, nchar(as.character(lisa_obs$Date)) - 3, nchar(as.character(lisa_obs$Date)))
+
+#source other required functions
+file_list <- c("mrds_modified_functions.R", 
+               "calcAbundanceSingle.R",
+               "sightingsAtLevel.R",
+               "createDistanceData.R",
+               "corObsByPercent.R",
+               "calcEnvtEffort.R",
+               "correctLTRT.R")
+
+for (f in file_list) {
+  source(paste0(wdir, "/code/R-aerial-survey/functions/", f))
+}
+
+#truncate to 300m
+lisa_obs <- lisa_obs[lisa_obs$Dist..from.transect <= 300, ]
+
+#merge lisa and vic's observations to get all sightings
+kable(table(lisa_obs$Flight.Direction[!(lisa_obs$Species == "")], lisa_obs$Species[!(lisa_obs$Species == "")]), caption = paste0("Total number of sightings by group and direction (n = ", length(unique(lisa_obs$Date)), " surveys in each direction) with 300m truncation"))
+
+poolAllSharks <- function(x) {
+  
+  x$Species[x$Species %in% c("W", "S", "Wh", "BS")] <- "S"
+  
+  return(x)
+  
+}
+
+#combine all shark species into a single category, except hammerheads
+lisa_obs <- poolAllSharks(lisa_obs)
+
+
+#---------------------------- DETECTION FUNCTIONS -----------------------------#
+
+strip_width <- 300
+
+
+#plots of detection probability for each species (300m strip width)
+for (s in c("B", "BOT", "S")) {
+  par(mfrow = c(1, 2))
+
+  for (d in c("N", "S")) {
+
+    total_observations <- createDistanceData(species = s, lisa_obs, truncate = strip_width, direction = d)
+
+    p_total <- ddf(method = 'ds',dsmodel =~ cds(key = "gamma", formula=~1),
+                   data = total_observations, meta.data = list(left = 50, width = 300))
+    summary(p_total)
+
+    #species and flight direction hash tables
+    species_tab <- matrix(c("B", "BOT", "S", "Fish", "Dolphins", "Sharks"), ncol = 2)
+    dir_tab <- matrix(c("N", "S", "North", "South"), ncol = 2)
+
+    plot(p_total, main = , cex.axis = 2, cex.lab = 2)
+    title(paste(species_tab[which(species_tab[, 1] == s), 2], ": ", dir_tab[which(dir_tab[, 1] == d), 2], sep = ""),
+          cex.main = 3)
+
+  }
+}
+
+```
+
+```{r point process, fig.cap="K-cross function between Bottlenose dolphins and Fish for each transect (n = 48)"}
+
+marked_points <- data.frame("longitude" = lisa_obs$Long, "latitude" = lisa_obs$Lat, "mark" = lisa_obs$Species, "seg" = lisa_obs$Trial)
+marked_points <- marked_points[marked_points$mark %in% c("B", "BOT"), ]
+marked_points <- na.omit(marked_points)
+marked_points$mark <- factor(marked_points$mark)
+
+#convert to utm so units are in m
+xy = data.frame(marked_points$longitude, marked_points$latitude)
+colnames(coordinates(xy)) <- c("lon", "lat")
+proj4string(xy) <- CRS("+proj=longlat +lisa_obsum=WGS84")
+marked_points[, 1:2] <- coordinates(spTransform(xy, CRS("+proj=utm +zone=53 ellps=WGS84")))
+marked_points$latitude[marked_points$latitude > 0] <- -1*marked_points$latitude[marked_points$latitude > 0]
+
+
+#Single line segment for each transect
+
+owin <- owin(xrange = c(min(marked_points$longitude), max(marked_points$longitude)+500), yrange = c(min(marked_points$latitude), max(marked_points$latitude)))
+
+l <- list()
+i = 1
+
+while (i <= length(unique(marked_points$seg))) {
+  
+  seg <- unique(marked_points$seg)[i]
+  
+  l[[i]] <- ppp(x = marked_points$longitude[marked_points$seg == seg], y = marked_points$latitude[marked_points$seg == seg], window = owin, marks = marked_points$mark[marked_points$seg == seg])
+  
+  i <- i + 1
+  
+}
+
+
+hf <- hyperframe(l)
+
+#plot K-cross for each transect
+
+par(mfrow = c(7, 7), mar = c(2, 2, 2, 2))
+
+for (i in 1:length(l)) {
+  plot(Kcross(l[i][[1]], "B", "BOT"), main = i)
+}
+
+
+```
+
+
+
+```{r Multitype strauss process, echo = TRUE}
+
+#multistrauss interaction
+
+radii <- matrix(c(1,1000,1000,1), nrow=2,ncol=2)
+
+Rad <- hyperframe(R=radii)
+Str <- with(Rad, MultiStrauss(R, types = c("B", "BOT")))
+
+Int <- hyperframe(str=Str)
+mppm(V1 ~ 1, hf, interaction=Int)
+
+```
+
+
+
+
