@@ -32,10 +32,21 @@ library(chron)
 library(knitr)
 library(spatstat)
 library(sp)
+library(rgeos) #gLength
+library(plotKML) #readGPX
+library(polyCub) #xylist
 
-#add a unique trial number to each day
-date_levels <- as.numeric(as.factor(c(as.character(lisa_obs$Date))))
-lisa_obs$Trial <- date_levels[1:nrow(lisa_obs)]
+#add a unique trial number to each day and direction
+lisa_obs$Trial[1] <- 1
+for (i in 2:nrow(lisa_obs)) {
+  
+  if (lisa_obs$Date[i] == lisa_obs$Date[i - 1] & lisa_obs$Flight.Direction[i] == lisa_obs$Flight.Direction[i - 1]) {
+    lisa_obs$Trial[i] <- lisa_obs$Trial[i - 1]
+  } else {
+    lisa_obs$Trial[i] <- lisa_obs$Trial[i - 1] + 1
+  }
+  
+}
 
 lisa_obs$Year <- substr(lisa_obs$Date, nchar(as.character(lisa_obs$Date)) - 3, nchar(as.character(lisa_obs$Date)))
 
@@ -100,7 +111,7 @@ for (s in c("B", "BOT", "S")) {
 
 ```
 
-```{r point process, fig.cap="K-cross function between Bottlenose dolphins and Fish for each transect (n = 48)"}
+```{r point process, fig.height=10, fig.width=10, fig.cap="K-cross function between Bottlenose dolphins and Fish for each transect (n = 48)"}
 
 marked_points <- data.frame("longitude" = lisa_obs$Long, "latitude" = lisa_obs$Lat, "mark" = lisa_obs$Species, "seg" = lisa_obs$Trial)
 marked_points <- marked_points[marked_points$mark %in% c("B", "BOT"), ]
@@ -116,8 +127,25 @@ marked_points$latitude[marked_points$latitude > 0] <- -1*marked_points$latitude[
 
 
 #Single line segment for each transect
+track <- readGPX("C:/Users/Lisa/Documents/phd/aerial survey/data/gps data/tracks/cruise_track.gpx")
+track_coords <- track$tracks[[2]]$`ACTIVE LOG`
 
-owin <- owin(xrange = c(min(marked_points$longitude), max(marked_points$longitude)+500), yrange = c(min(marked_points$latitude), max(marked_points$latitude)))
+#make spatial Lines object
+track_line <- SpatialLines(list(Lines(list(Line(cbind(track_coords$lon, track_coords$lat))), ID = 1)), proj4string = CRS("+proj=longlat +datum=WGS84"))
+
+#transform to utm
+track_utm <- spTransform(track_line, CRS("+proj=utm +zone=53 ellps=WGS84"))
+
+#find total length of track
+track_length <- gLength(track_utm)
+
+track_wide <- gBuffer(track_utm, width = 1000, byid = FALSE)
+
+#square owin
+# owin <- owin(xrange = c(min(marked_points$longitude), max(marked_points$longitude)+500), yrange = c(min(marked_points$latitude), max(marked_points$latitude)))
+
+#polygon owin
+owin <- owin(poly = xylist(track_wide))
 
 l <- list()
 i = 1
@@ -137,9 +165,9 @@ hf <- hyperframe(l)
 
 #plot K-cross for each transect
 
-par(mfrow = c(7, 7), mar = c(2, 2, 2, 2))
+par(mfrow = c(2, 3), mar = c(2, 2, 2, 2))
 
-for (i in 1:length(l)) {
+for (i in 1:6) {
   plot(Kcross(l[i][[1]], "B", "BOT"), main = i)
 }
 
@@ -147,18 +175,92 @@ for (i in 1:length(l)) {
 ```
 
 
+\paragraph{Bottlenose dolphin - fish interaction}
 
-```{r Multitype strauss process, echo = TRUE}
+A multiStrauss interaction can be fit to each point process, assuming that the nature of the interaction is constant across all transects.
+
+
+```{r Multitype strauss process}
+
+dist <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_km   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_han   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_haz   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_theo   <- matrix(NA, nrow = length(l), ncol = 1000)
+for (i in 1:length(l)) {
+  gm <- Gmulti(l[i][[1]], marks(l[i][[1]]) == "BOT", marks(l[i][[1]]) == "B")
+  
+  dist[i, 1:length(gm$r)] <- gm$r
+  gcross_km[i, 1:length(gm$r)] <- gm$km
+  gcross_han[i, 1:length(gm$r)] <- gm$han
+  gcross_haz[i, 1:length(gm$r)] <- gm$hazard
+  gcross_theo[i, 1:length(gm$r)] <- gm$theo
+}
+
+plot(colMeans(dist, na.rm = TRUE), colMeans(gcross_theo, na.rm = TRUE), type = "l", col = "blue", main = "BOT, B G-function")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_han, na.rm = TRUE), type = "l", col = "green")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_haz, na.rm = TRUE), type = "l", col = "black")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_km, na.rm = TRUE), type = "l", col = "red")
+
+
+
+dist <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_km   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_han   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_haz   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_theo   <- matrix(NA, nrow = length(l), ncol = 1000)
+for (i in 1:length(l)) {
+  gm <- Gmulti(l[i][[1]], marks(l[i][[1]]) == "B", marks(l[i][[1]]) == "B")
+  
+  dist[i, 1:length(gm$r)] <- gm$r
+  gcross_km[i, 1:length(gm$r)] <- gm$km
+  gcross_han[i, 1:length(gm$r)] <- gm$han
+  gcross_haz[i, 1:length(gm$r)] <- gm$hazard
+  gcross_theo[i, 1:length(gm$r)] <- gm$theo
+}
+
+plot(colMeans(dist, na.rm = TRUE), colMeans(gcross_theo, na.rm = TRUE), type = "l", col = "blue", main = "B, B G-function")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_han, na.rm = TRUE), type = "l", col = "green")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_haz, na.rm = TRUE), type = "l", col = "black")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_km, na.rm = TRUE), type = "l", col = "red")
+
+
+dist <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_km   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_han   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_haz   <- matrix(NA, nrow = length(l), ncol = 1000)
+gcross_theo   <- matrix(NA, nrow = length(l), ncol = 1000)
+for (i in 1:length(l)) {
+  gm <- Gmulti(l[i][[1]], marks(l[i][[1]]) == "BOT", marks(l[i][[1]]) == "BOT")
+  
+  dist[i, 1:length(gm$r)] <- gm$r
+  gcross_km[i, 1:length(gm$r)] <- gm$km
+  gcross_han[i, 1:length(gm$r)] <- gm$han
+  gcross_haz[i, 1:length(gm$r)] <- gm$hazard
+  gcross_theo[i, 1:length(gm$r)] <- gm$theo
+}
+
+plot(colMeans(dist, na.rm = TRUE), colMeans(gcross_theo, na.rm = TRUE), type = "l", col = "blue", main = "BOT, BOT G-function")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_han, na.rm = TRUE), type = "l", col = "green")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_haz, na.rm = TRUE), type = "l", col = "black")
+points(colMeans(dist, na.rm = TRUE), colMeans(gcross_km, na.rm = TRUE), type = "l", col = "red")
+
+
+
+
+
+
 
 #multistrauss interaction
 
-radii <- matrix(c(1,1000,1000,1), nrow=2,ncol=2)
+radii <- matrix(c(1000, 2000, 2000, 5000), nrow = 2, ncol = 2)
 
-Rad <- hyperframe(R=radii)
+Rad <- hyperframe(R = radii)
 Str <- with(Rad, MultiStrauss(R, types = c("B", "BOT")))
 
 Int <- hyperframe(str=Str)
-mppm(V1 ~ 1, hf, interaction=Int)
+mstrauss <- mppm(V1 ~ 1, hf, interaction=Int)
+mstrauss
 
 ```
 
